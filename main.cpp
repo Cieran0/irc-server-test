@@ -3,12 +3,11 @@
 #include <server.hpp>
 #include <cstring> // for memset
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <unistd.h> // for close
 
 
+server server_controller(6667);
+
 int main() {
-    server serve(8080);
-    serve.start();
+    server_controller.start();
 }

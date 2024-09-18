@@ -1,21 +1,18 @@
 #pragma once
+
 #include <thread>
 #include <mutex>
-#include <cstring> // for memset
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h> // for close
-#include <chrono>
 #include <vector>
 #include <string>
+#include <queue>
 
-typedef std::chrono::_V2::system_clock::time_point time_stamp;
-
-struct user_info {
-    std::string username;
-    std::string real_name;
-};
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <unistd.h> 
+#endif
 
 class client {
 public:
@@ -34,11 +31,13 @@ private:
     bool m_is_active;
     std::thread m_write_thread;
     std::thread m_read_thread;
-    std::chrono::time_point<std::chrono::system_clock> m_last_active;
-    std::vector<std::string> m_recieved_buffer;
-    std::vector<std::string> m_sending_buffer;
+    std::queue<std::string> m_recieved_buffer;
+    std::queue<std::string> m_sending_buffer;
     std::mutex m_editing_recieved_buffer;
     std::mutex m_editing_sending_buffer;
+
+    std::string m_username;
+    std::string m_real_name;
 
     void send(const std::string& message);
 };
