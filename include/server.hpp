@@ -37,6 +37,7 @@ public:
     channel& get_channel(std::string channel_name);
     int start();
     std::map<std::string,client*> client_map;
+    std::string host_name;
 };
 
 

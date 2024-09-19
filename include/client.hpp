@@ -37,6 +37,7 @@ private:
     std::mutex m_editing_sending_buffer;
 
     std::string m_username;
+    std::string m_nickname;
     std::string m_real_name;
 
     void send(const std::string& message);

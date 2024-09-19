@@ -2,6 +2,7 @@
 #include <iostream>
 #include "util.hpp"
 #include "server.hpp"
+#include <numeric>
 
 #ifdef _WIN32
     #define close closesocket
@@ -27,27 +28,28 @@ void client::handle() {
     while(m_username.empty() || m_real_name.empty()) {
         std::string message = get_next_message();
         if(message.starts_with("NICK ")) {
-            m_username = message.substr(5);
-            std::cout << "Username " << m_username << std::endl;
+            m_nickname= message.substr(5);
+            std::cout << "Username " << m_nickname << std::endl;
         } else if (message.starts_with("USER ")) {
+            m_username = split_string(message," ", 0)[1];
             int name_start = message.find_first_of(':');
             m_real_name = message.substr(name_start+1);
             std::cout << "Real name " << m_real_name << std::endl;
         } else if (message.starts_with("CAP ")) {
             std::cout << message << std::endl;
-            send_message(":DESKTOP-U8PC6T7. CAP * LS :\r\n");
+            send_message(":"+server_controller.host_name+" CAP * LS :\r\n");
         }
     }
 
-    server_controller.client_map.emplace(m_username, this);
+    server_controller.client_map.emplace(m_nickname, this);
 
     //TODO figure this out
-    send_message(":DESKTOP-U8PC6T7. 001 "+m_username+" :Hi, welcome to IRC\r\n");
-    send_message(":DESKTOP-U8PC6T7. 002 "+m_username+" :Your host is DESKTOP-U8PC6T7., running version miniircd-2.3\r\n");
-    send_message(":DESKTOP-U8PC6T7. 003 "+m_username+" :This server was created sometime\r\n");
-    send_message(":DESKTOP-U8PC6T7. 004 "+m_username+" DESKTOP-U8PC6T7. miniircd-2.3 o o\r\n");
-    send_message(":DESKTOP-U8PC6T7. 251 "+m_username+" :There are 2 users and 0 services on 1 server\r\n");
-    send_message(":DESKTOP-U8PC6T7. 422 "+m_username+" :MOTD File is missing\r\n");
+    send_message(":"+server_controller.host_name+" 001 "+m_nickname+" :Hi, welcome to IRC\r\n");
+    send_message(":"+server_controller.host_name+" 002 "+m_nickname+" :Your host is "+server_controller.host_name+", running version miniircd-2.3\r\n");
+    send_message(":"+server_controller.host_name+" 003 "+m_nickname+" :This server was created sometime\r\n");
+    send_message(":"+server_controller.host_name+" 004 "+m_nickname+" "+server_controller.host_name+" miniircd-2.3 o o\r\n");
+    send_message(":"+server_controller.host_name+" 251 "+m_nickname+" :There are 2 users and 0 services on 1 server\r\n");
+    send_message(":"+server_controller.host_name+" 422 "+m_nickname+" :MOTD File is missing\r\n");
 
     while (true)
     {
@@ -56,10 +58,35 @@ void client::handle() {
         if(message.starts_with("JOIN ")) {
             std::string channel_name = message.substr(5);
             std::cout << "Channel name [" << channel_name << "]" << std::endl;
-            server_controller.get_channel(channel_name).join(m_username);
+            server_controller.get_channel(channel_name).join(m_nickname);
+
+            send_message(":"+m_nickname+"!"+m_username+"@::1 JOIN "+channel_name+"\r\n");
+            send_message(":"+server_controller.host_name+" 331 "+m_nickname+ " " + channel_name + " :No topic is set\r\n");
+            std::unordered_set<std::string> user_list = server_controller.get_channel(channel_name).get_users();
+
+            std::string user_raw = std::accumulate(user_list.begin(), user_list.end(),std::string(),
+                [](const std::string& a, const std::string& b) -> std::string{
+                    return a+b;
+                });
+
+            send_message(":"+server_controller.host_name+" 353 "+m_nickname + " = " + channel_name+ ":" + user_raw + "\r\n");
+            send_message(":"+server_controller.host_name+" 366 "+m_nickname+ " " + channel_name+ ":End of NAMES list\r\n");
 
             for(std::string user : server_controller.get_channel(channel_name).get_users()) {
                 std::cout << "User: " << user << std::endl;
+            }
+        }
+        else if(message.starts_with("PING ")){
+            std::string pong_code = message.substr(5);
+            send_message(":"+server_controller.host_name+" PONG "+server_controller.host_name+" :" +pong_code+"\r\n");
+        }
+        else if(message.starts_with("WHO ")){
+            std::string channel_name = message.substr(5);
+            channel current_channel = server_controller.get_channel(channel_name);
+
+            std::string user_list;
+            for (std::string user : current_channel.get_users()){
+                //user_list = user_list + +" "+channel_name+" "+m_username
             }
         }
     }

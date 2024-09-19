@@ -24,6 +24,7 @@ int server::start() {
         std::cerr << "Error creating socket" << std::endl;
         return EXIT_FAILURE;
     }
+    host_name = "HOSTNAME";
 
     int optval = 1;
     if (setsockopt(this->m_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval)) < 0) {

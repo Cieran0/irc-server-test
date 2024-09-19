@@ -10,19 +10,19 @@ bool channel::empty()
     return m_users.empty();
 }
 
-bool channel::is_in(std::string username) 
+bool channel::is_in(std::string nickname) 
 {
-    return m_users.contains(username);
+    return m_users.contains(nickname);
 }
 
-void channel::join(std::string username)
+void channel::join(std::string nickname)
 {
-    m_users.emplace(username);
+    m_users.emplace(nickname);
 }
 
-void channel::remove_user(std::string username)
+void channel::remove_user(std::string nickname)
 {
-    m_users.erase(username);
+    m_users.erase(nickname);
 }
 
 std::unordered_set<std::string> channel::get_users() 

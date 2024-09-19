@@ -1,5 +1,4 @@
 #include <util.hpp>
-#include <algorithm>
 
 std::vector<std::string> split_string(const std::string& input, const std::string& split_by, bool include_last) {
     std::string buffer;
@@ -20,6 +19,8 @@ std::vector<std::string> split_string(const std::string& input, const std::strin
     }
     return split_strings;
 }
+
+
 
 bool contains(const std::vector<std::string>& vector, const std::string& element) {
     return std::find(vector.begin(), vector.end(), element) != vector.end();

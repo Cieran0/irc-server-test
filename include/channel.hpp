@@ -16,9 +16,9 @@ public:
     channel() = default;
     channel(std::string name);
     bool empty();
-    bool is_in(std::string username);
-    void join(std::string username);
-    void remove_user(std::string username);
+    bool is_in(std::string nickname);
+    void join(std::string nickname);
+    void remove_user(std::string nickname);
     std::unordered_set<std::string> get_users();
     ~channel();
 };
