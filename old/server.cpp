@@ -79,13 +79,11 @@ void server::handle_clients() {
         }
 
 
-        // TODO: figure out why this causes the sever to break?
-        //// Extract client's IP address (supports both IPv4 and IPv6)
-        //char ipstr[INET6_ADDRSTRLEN];  // Buffer for the IP address as a string
+        // TODO: figure out why this causes the sever to break? should get ip from client
+        //char ip_buffer[INET6_ADDRSTRLEN];  
 
-        //// Handle IPv4-mapped IPv6 or native IPv6 addresses
         //if (client_addr.sin6_family == AF_INET6) {
-        //    inet_ntop(AF_INET6, &client_addr.sin6_addr, ipstr, sizeof(ipstr));
+        //    inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
         //}
 
         // Create a client object and handle it in a separate thread
