@@ -106,6 +106,26 @@ void client::handle() {
         } else if(message.starts_with("MODE ")) {
             std::string channel_name = message.substr(5);
             send_message(":" + server_controller.host_name + " 324 "+m_info.nickname+" "+channel_name+" +\r\n");
+        } else if (message.starts_with("PRIVMSG ")) {
+            int text_start = message.find_first_of(":") + 1;
+            std::string text = message.substr(text_start);
+            std::string channel_or_user = message.substr(8, text_start - 10);
+            std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
+            std::cout << "txt: ["<<text<<"]" << std::endl;
+
+            std::unordered_set<std::string> user_list;
+            if(channel_or_user.starts_with("#")) {
+                user_list = server_controller.get_channel(channel_or_user).get_users();
+            } else {
+                user_list.emplace(channel_or_user);
+            }
+
+            std::string private_message = ":"+m_info.nickname+"!"+m_info.username+"@::1 PRIVMSG "+channel_or_user+" :" + text +"\r\n";
+
+            for(std::string nickname : user_list) {
+                if(nickname != m_info.nickname)
+                    server_controller.send_message_to_client(nickname, private_message);
+            }
         }
     }
     
