@@ -24,7 +24,7 @@ int server::start() {
         std::cerr << "Error creating socket" << std::endl;
         return EXIT_FAILURE;
     }
-    host_name = "HOSTNAME";
+    host_name = "DESKTOP-U8PC6T7.";
 
     int optval = 1;
     if (setsockopt(this->m_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval)) < 0) {
@@ -78,8 +78,18 @@ void server::handle_clients() {
             std::cerr << "Error setting receive timeout for client socket" << std::endl;
         }
 
+
+        // TODO: figure out why this causes the sever to break?
+        //// Extract client's IP address (supports both IPv4 and IPv6)
+        //char ipstr[INET6_ADDRSTRLEN];  // Buffer for the IP address as a string
+
+        //// Handle IPv4-mapped IPv6 or native IPv6 addresses
+        //if (client_addr.sin6_family == AF_INET6) {
+        //    inet_ntop(AF_INET6, &client_addr.sin6_addr, ipstr, sizeof(ipstr));
+        //}
+
         // Create a client object and handle it in a separate thread
-        this->m_clients.push_back(std::make_unique<client>(client_socket));
+        this->m_clients.push_back(std::make_unique<client>(client_socket, std::string("::1")));
         m_threads.emplace_back(
             std::thread(
                 [&client_pointer = m_clients.back()]() {
@@ -96,4 +106,16 @@ channel& server::get_channel(std::string channel_name) {
     }
     
     return m_channels[channel_name];
+}
+
+client_info server::get_client_info(const std::string& client) {
+    return client_map[client]->get_info();
+}
+
+void server::add_to_client_map(std::string nickname, client* client) {
+    client_map.emplace(nickname, client);
+}
+
+void server::send_message_to_client(std::string nickname, std::string message) {
+    client_map[nickname]->send_message(message);
 }

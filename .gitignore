@@ -32,3 +32,4 @@
 *.app
 test_irc
 .vscode/*
+linux_server

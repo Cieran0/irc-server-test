@@ -16,6 +16,7 @@
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <unistd.h>
+    #include <arpa/inet.h>
 #endif
 
 #include <client.hpp>
@@ -38,6 +39,9 @@ public:
     int start();
     std::map<std::string,client*> client_map;
     std::string host_name;
+    client_info get_client_info(const std::string& client);
+    void add_to_client_map(std::string nickname, client* client);
+    void send_message_to_client(std::string nickname, std::string message);
 };
 
 
