@@ -25,5 +25,7 @@ namespace server{
     struct sockaddr_in6 address;
 
     void init();
-    int start();   
+    client_info get_client_info(const std::string& client);
+    int start();
+    std::map<std::string,client*> client_map;
 }

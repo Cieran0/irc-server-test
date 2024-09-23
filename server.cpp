@@ -56,3 +56,7 @@ int server::start(){
 
     return 0;
 }
+
+client_info server::get_client_info(const std::string& client){
+    return client_map[client]->get_info();
+}
