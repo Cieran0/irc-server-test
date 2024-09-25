@@ -126,6 +126,10 @@ void client::handle(){
                     server::send_message_to_client(nickname, private_message);
             }
         }
+        if (message.starts_with("CAP ")){
+            send_message(":" + server::host_name + " CAP * LS :\r\n");
+            send_message(":" + server::host_name + " CAP * END\r\n");
+        }
     }
 }
 
@@ -151,6 +155,57 @@ std::string client::get_next_message(){
     return message;
 }
 
+void client::handle_reading(client* instance) {
+    char buffer[1024];
+    int bytes_received = -1;
+
+    while(instance->m_is_active) {
+        bytes_received = recv(instance->m_socket, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0';
+            std::cout << "Received: " << buffer << std::endl;
+
+            {
+                std::lock_guard<std::mutex> lock(instance->m_editing_recieved_buffer);
+                std::vector<std::string> messages = split_string(std::string(buffer), "\r\n", false);
+                for (const std::string& message : messages) {
+                    instance->m_recieved_buffer.push(message);
+                }
+            }
+        } else if (bytes_received == 0) {
+            // Graceful disconnect: client closed connection
+            std::cout << "Client closed connection." << std::endl;
+            instance->m_is_active = false;
+        } else {
+            // Handle socket errors
+            #ifdef _WIN32
+                int error_code = WSAGetLastError();
+                if (error_code == WSAETIMEDOUT) {
+                    std::cout << "Receive timeout (non-fatal)." << std::endl;
+                    // Don't disconnect here, just continue looping
+                    continue;
+                } else if (error_code == WSAEWOULDBLOCK) {
+                    std::cout << "Non-blocking operation could not complete (non-fatal)." << std::endl;
+                    // Continue loop, this is non-fatal
+                    continue;
+                } else {
+                    std::cerr << "Socket error: " << error_code << std::endl;
+                    instance->m_is_active = false; // Fatal error
+                }
+            #else
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::cout << "Non-blocking operation could not complete (non-fatal)." << std::endl;
+                    continue;
+                } else {
+                    std::cerr << "Socket error: " << strerror(errno) << std::endl;
+                    instance->m_is_active = false; // Fatal error
+                }
+            #endif
+        }
+    }
+}
+/*
 void client::handle_reading(client* instance){
     char buffer[1024];
     int bytes_received = -1;
@@ -179,7 +234,7 @@ void client::handle_reading(client* instance){
         }
     }
 }
-
+*/
 void client::handle_writing(client* instance){
     while(instance->m_is_active){
         std::string response;
