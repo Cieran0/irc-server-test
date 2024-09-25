@@ -26,6 +26,7 @@
 namespace server{
     extern int file_descriptor;
     extern struct sockaddr_in6 address;
+    extern struct sockaddr_in6 client_addr;
     extern std::vector<std::unique_ptr<client>> clients;
     extern std::vector<std::thread> threads;
     extern std::string host_name;

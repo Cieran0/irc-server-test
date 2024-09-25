@@ -126,10 +126,6 @@ void client::handle(){
                     server::send_message_to_client(nickname, private_message);
             }
         }
-        if (message.starts_with("CAP ")){
-            send_message(":" + server::host_name + " CAP * LS :\r\n");
-            send_message(":" + server::host_name + " CAP * END\r\n");
-        }
     }
 }
 
@@ -198,7 +194,7 @@ void client::handle_reading(client* instance) {
                     std::cout << "Non-blocking operation could not complete (non-fatal)." << std::endl;
                     continue;
                 } else {
-                    std::cerr << "Socket error: " << strerror(errno) << std::endl;
+                    std::cerr << "Socket error: " <<  std::endl;
                     instance->m_is_active = false; // Fatal error
                 }
             #endif

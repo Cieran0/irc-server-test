@@ -12,8 +12,9 @@ struct sockaddr_in6 server::address = {};
 std::map<std::string, client*> server::client_map;
 std::vector<std::unique_ptr<client>> server::clients;
 std::vector<std::thread> server::threads;
-std::string server::host_name = "Temp HOSTNAME";
+std::string server::host_name = "Temp_HOSTNAME";
 std::map<std::string,channel> server::m_channels;
+struct sockaddr_in6 server::client_addr;
 
 void server::init(){
 #ifdef _WIN32
@@ -41,6 +42,9 @@ int server::start(){
         close(file_descriptor);
         return EXIT_FAILURE;
     }
+
+    // TODO: figure out why this causes the sever to break? should get ip from client
+
 
     // Set up the IPv6 address struct
     memset(&address,0,sizeof(address));
@@ -78,6 +82,13 @@ void server::handle_clients(){
         if(setsockopt(client_socket, SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout))<0){
             std::cerr << "Error setting receive timeout for client socket" << std::endl;
         }
+
+    char ip_buffer[INET6_ADDRSTRLEN]  ={0};  
+
+    if (client_addr.sin6_family == AF_INET6) {
+        inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
+    }
+    std::cout << "ip: [" << ip_buffer << "]" << std::endl;
 
         clients.push_back(std::make_unique<client>(client_socket, std::string("::1")));
         threads.emplace_back(
