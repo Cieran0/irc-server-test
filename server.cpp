@@ -6,7 +6,14 @@
     #define close closesocket
 #endif
 
-#define PORT 6667
+//extern definitions
+int server::file_descriptor = 0;
+struct sockaddr_in6 server::address = {};
+std::map<std::string, client*> server::client_map;
+std::vector<std::unique_ptr<client>> server::clients;
+std::vector<std::thread> server::threads;
+std::string server::host_name = "Temp HOSTNAME";
+std::map<std::string,channel> server::m_channels;
 
 void server::init(){
 #ifdef _WIN32
@@ -20,6 +27,7 @@ void server::init(){
 }
 
 int server::start(){
+    init();
     //Create an IPv6 socket (AF_INET6)
     file_descriptor = socket(AF_INET6, SOCK_STREAM, 0);
     if(file_descriptor < 0){
@@ -54,9 +62,49 @@ int server::start(){
 
     std::cout<< "Server started on port: " << PORT << " (IPv6)" << std::endl;
 
+    handle_clients();
     return 0;
+}
+
+void server::handle_clients(){
+    struct sockaddr_in6 client_addr;
+    socklen_t client_addr_len = sizeof(client_addr);
+    int client_socket;
+
+    while((client_socket = accept(file_descriptor, (struct sockaddr*)&client_addr,&client_addr_len)) >= 0){
+        struct timeval timeout;
+        timeout.tv_sec = 60*5;
+        timeout.tv_usec = 0;
+        if(setsockopt(client_socket, SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout))<0){
+            std::cerr << "Error setting receive timeout for client socket" << std::endl;
+        }
+
+        clients.push_back(std::make_unique<client>(client_socket, std::string("::1")));
+        threads.emplace_back(
+            std::thread(
+                [&client_pointer = clients.back()](){
+                    client_pointer->handle();
+                }
+            )
+        );
+    }
 }
 
 client_info server::get_client_info(const std::string& client){
     return client_map[client]->get_info();
+}
+
+channel& server::get_channel(std::string channel_name){
+    if(!m_channels.contains(channel_name)){
+        m_channels.emplace(channel_name, channel(channel_name));
+    }
+    return m_channels[channel_name];
+}
+
+void server::add_to_client_map(std::string nickname, client* client){
+    client_map.emplace(nickname, client);
+}
+
+void server::send_message_to_client(std::string nickname, std::string message){
+    client_map[nickname]->send_message(message);
 }
