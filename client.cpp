@@ -84,6 +84,12 @@ void client::handle(){
                 std::cout << "User: " << user << std::endl;
             }
         }
+        else if(message.starts_with("PART ")){
+            std::string channel_name = message.substr(5);
+            server::get_channel(channel_name).remove_user(m_info.nickname);
+
+            send_message(":"+m_info.nickname+"!"+m_info.username+"@::1 PART "+channel_name+"\r\n");
+        }
         else if(message.starts_with("PING ")){
             std::string pong_code = message.substr(5);
             send_message(":"+server::host_name+" PONG "+server::host_name+" :" +pong_code+"\r\n");
