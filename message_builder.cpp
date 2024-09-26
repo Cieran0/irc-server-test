@@ -23,8 +23,12 @@ message_builder::~message_builder()
 {
 }
 
-message_builder& message_builder::hostname() {
-    back << ":" << server::host_name << " ";
+message_builder& message_builder::hostname(bool add_colon) {
+    if(add_colon){
+        back << ":";
+    }
+    back << server::host_name << " ";
+    
     return *this;
 };
 message_builder& message_builder::code(int code) {
@@ -40,8 +44,12 @@ message_builder& message_builder::raw(std::string str, bool addSpace) {
     return *this;
 
 };
-message_builder& message_builder::text(std::string text) {
-    back << ":" << text;
+message_builder& message_builder::text(std::string text, bool add_colon) {
+    if(add_colon){
+        back << ":";
+    }
+    back << text;
+    
     return *this;
 };
 

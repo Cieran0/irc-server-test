@@ -12,10 +12,10 @@ public:
     message_builder();
     ~message_builder();
 
-    message_builder& hostname();
+    message_builder& hostname(bool add_colon);
     message_builder& code(int code);
     message_builder& raw(std::string str, bool addSpace);
-    message_builder& text(std::string text);
+    message_builder& text(std::string text, bool add_colon);
 
     std::string build();
 };

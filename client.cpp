@@ -51,18 +51,51 @@ void client::handle(){
         //TODO figure this out
 
     std::string welcome_message = message_builder()
-                            .hostname()
+                            .hostname(true)
                             .code(irc::RPL_WELCOME)
                             .raw(m_info.nickname, true)
-                            .text("Hi, welcome to IRC")
+                            .text("Hi, welcome to IRC",true)
+                            .build();
+    std::string host_message = message_builder()
+                            .hostname(true)
+                            .code(irc::RPL_YOURHOST)
+                            .raw(m_info.nickname, true)
+                            .text("Your host is ", true)
+                            .hostname(false)
+                            .text(", running version miniircd-2.3", false)
+                            .build();
+    std::string creation_message = message_builder()
+                            .hostname(true)
+                            .code(irc::RPL_CREATED)
+                            .raw(m_info.nickname, true)
+                            .text("This server was created sometime", true)
+                            .build();
+    std::string server_info_message = message_builder()
+                            .hostname(true)
+                            .code(irc::RPL_MYINFO)
+                            .raw(m_info.nickname, true)
+                            .hostname(false)
+                            .text(" miniircd-2.3 o o", false)
+                            .build();
+    std::string other_users_message = message_builder()
+                            .hostname(true)
+                            .code(irc::RPL_LUSERCLIENT)
+                            .raw(m_info.nickname, true)
+                            .text("There are 2 users and 0 services on 1 server", true)
+                            .build();
+    std::string MOTD_message = message_builder()
+                            .hostname(true)
+                            .code(irc::ERR_NOMOTD)
+                            .raw(m_info.nickname, true)
+                            .text("MOTD File missing", true)
                             .build();
 
     send_message(welcome_message);
-    send_message(":"+server::host_name+" 002 "+m_info.nickname+" :Your host is "+server::host_name+", running version miniircd-2.3\r\n");
-    send_message(":"+server::host_name+" 003 "+m_info.nickname+" :This server was created sometime\r\n");
-    send_message(":"+server::host_name+" 004 "+m_info.nickname+" "+server::host_name+" miniircd-2.3 o o\r\n");
-    send_message(":"+server::host_name+" 251 "+m_info.nickname+" :There are 2 users and 0 services on 1 server\r\n");
-    send_message(":"+server::host_name+" 422 "+m_info.nickname+" :MOTD File is missing\r\n");
+    send_message(host_message);
+    send_message(creation_message);
+    send_message(server_info_message);
+    send_message(other_users_message);
+    send_message(MOTD_message);
 
     while(true){
         std::string message = get_next_message();
