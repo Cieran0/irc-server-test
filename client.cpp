@@ -3,6 +3,7 @@
 #include <numeric>
 #include "util.hpp"
 #include <message_builder.hpp>
+#include <irc_numberic_replies.hpp>
 
 #ifdef _WIN32
     #define close closesocket
@@ -51,7 +52,7 @@ void client::handle(){
 
     std::string welcome_message = message_builder()
                             .hostname()
-                            .code(1)
+                            .code(irc::RPL_WELCOME)
                             .raw(m_info.nickname, true)
                             .text("Hi, welcome to IRC")
                             .build();
