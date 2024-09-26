@@ -76,19 +76,18 @@ void server::handle_clients(){
     int client_socket;
 
     while((client_socket = accept(file_descriptor, (struct sockaddr*)&client_addr,&client_addr_len)) >= 0){
-        struct timeval timeout;
-        timeout.tv_sec = 60*5;
-        timeout.tv_usec = 0;
-        if(setsockopt(client_socket, SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout))<0){
-            std::cerr << "Error setting receive timeout for client socket" << std::endl;
+        //struct timeval timeout;
+        //timeout.tv_sec = 60*5;
+        //timeout.tv_usec = 0;
+        //if(setsockopt(client_socket, SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout))<0){
+        //    std::cerr << "Error setting receive timeout for client socket" << std::endl;
+        //}
+
+        char ip_buffer[INET6_ADDRSTRLEN]  ={0}; 
+        if (client_addr.sin6_family == AF_INET6) {
+            inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
         }
-
-    char ip_buffer[INET6_ADDRSTRLEN]  ={0};  
-
-    if (client_addr.sin6_family == AF_INET6) {
-        inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
-    }
-    std::cout << "ip: [" << ip_buffer << "]" << std::endl;
+        std::cout << "ip: [" << ip_buffer << "]" << std::endl;
 
         clients.push_back(std::make_unique<client>(client_socket, std::string("::1")));
         threads.emplace_back(
