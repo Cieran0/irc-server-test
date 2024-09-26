@@ -2,6 +2,7 @@
 #include "server.hpp"
 #include <numeric>
 #include "util.hpp"
+#include <message_builder.hpp>
 
 #ifdef _WIN32
     #define close closesocket
@@ -47,7 +48,15 @@ void client::handle(){
     server::add_to_client_map(m_info.nickname, this);
 
         //TODO figure this out
-    send_message(":"+server::host_name+" 001 "+m_info.nickname+" :Hi, welcome to IRC\r\n");
+
+    std::string welcome_message = message_builder()
+                            .hostname()
+                            .code(1)
+                            .raw(m_info.nickname, true)
+                            .text("Hi, welcome to IRC")
+                            .build();
+
+    send_message(welcome_message);
     send_message(":"+server::host_name+" 002 "+m_info.nickname+" :Your host is "+server::host_name+", running version miniircd-2.3\r\n");
     send_message(":"+server::host_name+" 003 "+m_info.nickname+" :This server was created sometime\r\n");
     send_message(":"+server::host_name+" 004 "+m_info.nickname+" "+server::host_name+" miniircd-2.3 o o\r\n");
