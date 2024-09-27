@@ -13,6 +13,9 @@
 #include <string>
 #include <mutex>
 #include <queue>
+#include <numeric>
+#include <irc.hpp>
+
 
 struct client_info{
     std::string username;
@@ -21,31 +24,34 @@ struct client_info{
     std::string ip;
 };
 
-class client{
-    private:
-        int m_socket;
-        bool m_is_active;
-        std::thread m_read_thread;
-        std::thread m_write_thread;
-        std::queue<std::string> m_recieved_buffer;
-        std::queue<std::string> m_sending_buffer;
-        std::mutex m_editing_recieved_buffer;
-        std::mutex m_editing_sending_buffer;
+struct client{
+        bool is_active;
+        int socket;
+        bool welcomed=false;
+        client_info info;
 
-        struct client_info m_info;
-
-        static void handle_reading(client* instance);
-        static void handle_writing(client* instance);
-
-        void send(const std::string& message);
-    public:
         client(int socket, std::string client_ip);
         ~client();
 
         client_info get_info();
-        void handle();
-        void send_message(const std::string& message);
+        void handle_message(std::string message);
+        void send_message(std::string message);
         std::string get_next_message();
+        bool read_from(char* buffer, size_t buffer_length);
+
+    private:
+        void welcome();
+        
+        void NICK(irc::client_command parsedCommand);
+        void USER(irc::client_command parsedCommand);
+        void CAP(irc::client_command parsedCommand);
+        void JOIN(irc::client_command parsedCommand);
+        void PART(irc::client_command parsedCommand);
+        void PING(irc::client_command parsedCommand);
+        void WHO(irc::client_command parsedCommand);
+        void MODE(irc::client_command parsedCommand);
+        void PRIVMSG(irc::client_command parsedCommand);
+        void QUIT(irc::client_command parsedCommand);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);
