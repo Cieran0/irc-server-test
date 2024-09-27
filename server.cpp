@@ -16,20 +16,16 @@ std::string server::host_name = "Temp_HOSTNAME";
 std::map<std::string,channel> server::m_channels;
 std::queue<std::pair<int,std::string>> server::output_queue;
 
-void server::init(){
+int server::init(){
 #ifdef _WIN32
     WSADATA wsaData;
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (result != 0) {
         std::cerr << "WSAStartup failed: " << result << std::endl;
-        exit(EXIT_FAILURE);
+        return (EXIT_FAILURE);
     }
 #endif
-}
 
-int server::start(){
-    init();
-    //Create an IPv6 socket (AF_INET6)
     file_descriptor = socket(AF_INET6, SOCK_STREAM, 0);
     if(file_descriptor < 0){
         std::cerr << "Error creating socket" << std::endl;
@@ -43,10 +39,7 @@ int server::start(){
         return EXIT_FAILURE;
     }
 
-    // TODO: figure out why this causes the sever to break? should get ip from client
 
-
-    // Set up the IPv6 address struct
     memset(&address,0,sizeof(address));
     address.sin6_family = AF_INET6;
     address.sin6_addr = in6addr_any;
@@ -65,6 +58,14 @@ int server::start(){
     }
 
     std::cout<< "Server started on port: " << PORT << " (IPv6)" << std::endl;
+
+    return 0;
+}
+
+int server::main(){
+    if(init() != 0) {
+        return EXIT_FAILURE;
+    }
 
     handle_clients();
     return 0;
@@ -132,15 +133,48 @@ void server::handle_clients(){
                 should_close = current_client.read_from(buffer, sizeof(buffer));
 
                 if(should_close) {
+
+                    //close connection, and remove client from polling.
+
                     close(client_socket);
-                    // Remove client from poll set
-                    fds[i].fd = fds[nfds - 1].fd;
-                    fds[i].events = fds[nfds - 1].events;
+                    clients.erase(it);
+                    if (i != nfds - 1) {
+                        fds[i].fd = fds[nfds - 1].fd;
+                        fds[i].events = fds[nfds - 1].events;
+                     }
                     nfds--;
+                    std::cout << "Closed connection with client socket: " << client_socket << std::endl;
                     continue;
                 }   
-                std::string message_recieved(buffer);
-                current_client.handle_message(message_recieved);
+                std::string messages_recieved(buffer);
+
+                std::vector<std::string> messages = split_string(messages_recieved, "\r\n", false);
+                for(const std::string& message: messages){
+                    current_client.handle_message(message);
+                }
+
+                if(!current_client.is_active) {
+                    //close connection, and remove client from polling.
+                    close(client_socket);
+                    clients.erase(it);
+                    if (i != nfds - 1) {
+                        fds[i].fd = fds[nfds - 1].fd;
+                        fds[i].events = fds[nfds - 1].events;
+                     }
+                    nfds--;
+                    std::cout << "Closed connection with client socket: " << client_socket << std::endl;
+                }
+                
+            } else if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+                std::cerr << "Error or hang-up on socket: " << fds[i].fd << std::endl;
+                close(fds[i].fd);
+                clients.erase(fds[i].fd);
+
+                if (i != nfds - 1) {
+                    fds[i].fd = fds[nfds - 1].fd;
+                    fds[i].events = fds[nfds - 1].events;
+                }
+                nfds--;
             }
         }
     
@@ -160,13 +194,12 @@ void server::send_all_queued_messages() {
         std::map<int,client>::iterator it = clients.find(client_socket);
 
         if (it == clients.end()){
-            std::cout << "Rut roh raggy aagain" << std::endl;
+            //Ignore messages to users who have left.
             continue;
         }
 
         send(client_socket, message.c_str(), message.size(), 0);
 
-        std::cout << "HAY" << std::endl;
     }
 }
 

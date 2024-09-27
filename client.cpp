@@ -9,33 +9,30 @@
     #define close closesocket
 #endif
 
-client::client(int socket, std::string ip) : m_socket(socket), m_is_active(true){
-    m_info.ip = ip;
+client::client(int socket, std::string ip) {
+    info.ip = ip;
+    this->socket = socket;
+    is_active = true;
 }
 
 client::~client() {
-    m_is_active = false;
-    if (m_read_thread.joinable()) {
-        m_read_thread.join();
-    }
-    if (m_write_thread.joinable()) {
-        m_write_thread.join();
-    }
-    close(m_socket);
+    is_active = false;
 }
 
 void client::handle_message(std::string message){
-    if(m_info.username.empty() || m_info.realname.empty()){
+    std::cout << "[ " << socket << "] sent: " << message << std::endl;
+
+    if(info.username.empty() || info.realname.empty()){
         if(message.starts_with("NICK ")){
-            m_info.nickname = message.substr(5);
-            server::add_to_client_map(m_info.nickname, this);
-            std::cout << "Nickname " << m_info.nickname << std::endl;
+            info.nickname = message.substr(5);
+            server::add_to_client_map(info.nickname, this);
+            std::cout << "Nickname " << info.nickname << std::endl;
         }
         else if(message.starts_with("USER ")){
-            m_info.username = split_string(message," ",0)[1];
+            info.username = split_string(message," ",0)[1];
             int name_start = message.find_first_of(':');
-            m_info.realname = message.substr(name_start+1);
-            std::cout << "Real name " << m_info.realname << std::endl;
+            info.realname = message.substr(name_start+1);
+            std::cout << "Real name " << info.realname << std::endl;
         }
         else if(message.starts_with("CAP ")){
             std::cout << message << std::endl;
@@ -43,20 +40,20 @@ void client::handle_message(std::string message){
         }
     }
 
-    server::add_to_client_map(m_info.nickname, this);
+    server::add_to_client_map(info.nickname, this);
 
         //TODO figure this out
 
     std::string welcome_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_WELCOME)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .text("Hi, welcome to IRC",true)
                             .build();
     std::string host_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_YOURHOST)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .text("Your host is ", true)
                             .hostname(false)
                             .text(", running version miniircd-2.3", false)
@@ -64,26 +61,26 @@ void client::handle_message(std::string message){
     std::string creation_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_CREATED)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .text("This server was created sometime", true)
                             .build();
     std::string server_info_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_MYINFO)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .hostname(false)
                             .text(" miniircd-2.3 o o", false)
                             .build();
     std::string other_users_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_LUSERCLIENT)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .text("There are 2 users and 0 services on 1 server", true)
                             .build();
     std::string MOTD_message = message_builder()
                             .hostname(true)
                             .code(irc::ERR_NOMOTD)
-                            .raw(m_info.nickname, true)
+                            .raw(info.nickname, true)
                             .text("MOTD File missing", true)
                             .build();
 
@@ -98,24 +95,24 @@ void client::handle_message(std::string message){
         if(message.starts_with("JOIN ")){
             std::string channel_name = message.substr(5);
             std::cout << "Channel name [" << channel_name << "]" << std::endl;
-            server::get_channel(channel_name).join(m_info.nickname);
+            server::get_channel(channel_name).join(info.nickname);
             std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
 
-            std::string join_message = ":"+m_info.nickname+"!"+m_info.username+"@::1 JOIN "+channel_name+"\r\n";
+            std::string join_message = ":"+info.nickname+"!"+info.username+"@::1 JOIN "+channel_name+"\r\n";
 
             send_message(join_message);
-            send_message(":"+server::host_name+" 331 "+m_info.nickname+ " " + channel_name + " :No topic is set\r\n");
+            send_message(":"+server::host_name+" 331 "+info.nickname+ " " + channel_name + " :No topic is set\r\n");
 
             std::string user_raw = std::accumulate(user_list.begin(), user_list.end(),std::string(),
                 [](const std::string& a, const std::string& b) -> std::string{
                     return a+" "+b;
                 });
 
-            send_message(":"+server::host_name+" 353 "+m_info.nickname + " = " + channel_name+ " :" + user_raw + "\r\n");
-            send_message(":"+server::host_name+" 366 "+m_info.nickname+ " " + channel_name+ " :End of NAMES list\r\n");
+            send_message(":"+server::host_name+" 353 "+info.nickname + " = " + channel_name+ " :" + user_raw + "\r\n");
+            send_message(":"+server::host_name+" 366 "+info.nickname+ " " + channel_name+ " :End of NAMES list\r\n");
 
             for(std::string nickname : user_list) {
-                if(nickname != m_info.nickname)
+                if(nickname != info.nickname)
                     server::send_message_to_client(nickname, join_message);
             }
 
@@ -125,9 +122,9 @@ void client::handle_message(std::string message){
         }
         else if(message.starts_with("PART ")){
             std::string channel_name = message.substr(5);
-            server::get_channel(channel_name).remove_user(m_info.nickname);
+            server::get_channel(channel_name).remove_user(info.nickname);
 
-            send_message(":"+m_info.nickname+"!"+m_info.username+"@::1 PART "+channel_name+"\r\n");
+            send_message(":"+info.nickname+"!"+info.username+"@::1 PART "+channel_name+"\r\n");
         }
         else if(message.starts_with("PING ")){
             std::string pong_code = message.substr(5);
@@ -144,12 +141,12 @@ void client::handle_message(std::string message){
                 std::cout << "USER: " << user << std::endl;
                 clients_info.push_back(server::get_client_info(user));
             }
-            std::string response = generate_who_response(m_info.nickname, clients_info, channel_name);
+            std::string response = generate_who_response(info.nickname, clients_info, channel_name);
             std::cout << "Response [" << response << "]" << std::endl;
             send_message(response);
         } else if(message.starts_with("MODE ")) {
             std::string channel_name = message.substr(5);
-            send_message(":" + server::host_name + " 324 "+m_info.nickname+" "+channel_name+" +\r\n");
+            send_message(":" + server::host_name + " 324 "+info.nickname+" "+channel_name+" +\r\n");
         } else if (message.starts_with("PRIVMSG ")) {
             int text_start = message.find_first_of(":") + 1;
             std::string text = message.substr(text_start);
@@ -164,93 +161,27 @@ void client::handle_message(std::string message){
                 user_list.emplace(channel_or_user);
             }
 
-            std::string private_message = ":"+m_info.nickname+"!"+m_info.username+"@::1 PRIVMSG "+channel_or_user+" :" + text +"\r\n";
+            std::string private_message = ":"+info.nickname+"!"+info.username+"@::1 PRIVMSG "+channel_or_user+" :" + text +"\r\n";
 
             for(std::string nickname : user_list) {
-                if(nickname != m_info.nickname)
+                std::cout << "USER: " << nickname << std::endl;
+                if(nickname != info.nickname)
                     server::send_message_to_client(nickname, private_message);
             }
+        } else if (message.starts_with("QUIT ")) {
+            is_active = false;
         }
     }
 }
 
 
 void client::send_message(std::string message){
-    server::output_queue.emplace(m_socket, message);
+    server::output_queue.emplace(socket, message);
 }
-/*
-std::string client::get_next_message(){
-    std::string message;
-    while(m_is_active){
-        {
-            std::lock_guard<std::mutex> lock(m_editing_recieved_buffer);
-            if(!m_recieved_buffer.empty()){
-                message = m_recieved_buffer.front();
-                m_recieved_buffer.pop();
-                break;
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    return message;
-}
-
-
-void client::handle_reading(client* instance) {
-    char buffer[1024];
-    int bytes_received = -1;
-
-    while(instance->m_is_active) {
-        bytes_received = recv(instance->m_socket, buffer, sizeof(buffer) - 1, 0);
-
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-            std::cout << "Received: " << buffer << std::endl;
-
-            {
-                std::lock_guard<std::mutex> lock(instance->m_editing_recieved_buffer);
-                std::vector<std::string> messages = split_string(std::string(buffer), "\r\n", false);
-                for (const std::string& message : messages) {
-                    instance->m_recieved_buffer.push(message);
-                }
-            }
-        } else if (bytes_received == 0) {
-            // Graceful disconnect: client closed connection
-            std::cout << "Client closed connection." << std::endl;
-            instance->m_is_active = false;
-        } else {
-            // Handle socket errors
-            #ifdef _WIN32
-                int error_code = WSAGetLastError();
-                if (error_code == WSAETIMEDOUT) {
-                    std::cout << "Receive timeout (non-fatal)." << std::endl;
-                    // Don't disconnect here, just continue looping
-                    continue;
-                } else if (error_code == WSAEWOULDBLOCK) {
-                    std::cout << "Non-blocking operation could not complete (non-fatal)." << std::endl;
-                    // Continue loop, this is non-fatal
-                    continue;
-                } else {
-                    std::cerr << "Socket error: " << error_code << std::endl;
-                    instance->m_is_active = false; // Fatal error
-                }
-            #else
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    std::cout << "Non-blocking operation could not complete (non-fatal)." << std::endl;
-                    continue;
-                } else {
-                    std::cerr << "Socket error: " <<  std::endl;
-                    instance->m_is_active = false; // Fatal error
-                }
-            #endif
-        }
-    }
-}
-*/
 
 bool client::read_from(char* buffer, size_t buffer_length) {
     bool should_close = false;
-    int bytes_received = recv(m_socket, buffer, buffer_length - 1, 0);
+    int bytes_received = recv(socket, buffer, buffer_length - 1, 0);
 
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
@@ -263,66 +194,15 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 
     } else {
         // Handle socket error
-        std::cerr << "Socket error on client: " << m_socket << std::endl;
+        std::cerr << "Socket error on client: " << socket << std::endl;
         should_close = true;
     }
     return should_close;
 }
 
-/*
-void client::handle_reading(client* instance){
-    char buffer[1024];
-    int bytes_received = -1;
-
-    while(instance->m_is_active){
-        if((bytes_received = recv(instance->m_socket, buffer, sizeof(buffer) -1,0))>0){
-            buffer[bytes_received] = '\0';
-            std::cout << "received: " << buffer << std::endl;
-            {
-                std::lock_guard<std::mutex> lock(instance->m_editing_recieved_buffer);
-                std::vector<std::string> messages = split_string(std::string(buffer), "\r\n", false);
-                for(const std::string& message: messages){
-                    instance->m_recieved_buffer.push(message);
-                }
-            }
-        }
-        else{
-#ifdef _WIN32
-            int error_code = WSAGetLastError();
-            if (error_code == WSAETIMEDOUT) {
-                std::cout << "Receive timeout" << std::endl;
-            }
-#endif
-            instance->m_is_active = false;
-            std::cout << "Client disconnected" << std::endl;
-        }
-    }
-}
-
-void client::handle_writing(client* instance){
-    while(instance->m_is_active){
-        std::string response;
-        {
-            std::lock_guard<std::mutex> lock(instance->m_editing_sending_buffer);
-            if(!instance->m_sending_buffer.empty()){
-                response = instance->m_sending_buffer.front();
-                instance->m_sending_buffer.pop();
-            }
-        }
-        if(!response.empty()){
-            instance->send(response);
-        }
-    }
-}
-
-void client::send(const std::string& message){
-    ::send(m_socket, message.c_str(), message.size(), 0);
-}
-
-*/
 
 client_info client::get_info() {
-    return m_info;
+    return info;
 }
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel) {

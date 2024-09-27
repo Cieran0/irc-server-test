@@ -21,24 +21,11 @@ struct client_info{
     std::string ip;
 };
 
-class client{
-    private:
-        int m_socket;
-        bool m_is_active;
-        std::thread m_read_thread;
-        std::thread m_write_thread;
-        std::queue<std::string> m_recieved_buffer;
-        std::queue<std::string> m_sending_buffer;
-        std::mutex m_editing_recieved_buffer;
-        std::mutex m_editing_sending_buffer;
+struct client{
+        bool is_active;
+        int socket;
+        client_info info;
 
-        struct client_info m_info;
-
-        static void handle_reading(client* instance);
-        static void handle_writing(client* instance);
-
-        void send(const std::string& message);
-    public:
         client(int socket, std::string client_ip);
         ~client();
 
