@@ -118,7 +118,7 @@ void client::handle_message(std::string message){
         QUIT(parsedCommand);
     } 
     else if("CAP" == parsedCommand.command) {
-            CAP(parsedCommand);
+        CAP(parsedCommand);
     }
     else {
         std::cout << "Unhandled command [" << parsedCommand.command << "] !" << std::endl;
