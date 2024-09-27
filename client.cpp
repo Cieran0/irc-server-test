@@ -117,6 +117,9 @@ void client::handle_message(std::string message){
     else if ("QUIT" == parsedCommand.command) {
         QUIT(parsedCommand);
     } 
+    else if("CAP" == parsedCommand.command) {
+            CAP(parsedCommand);
+    }
     else {
         std::cout << "Unhandled command [" << parsedCommand.command << "] !" << std::endl;
     }
@@ -133,7 +136,7 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        std::cout << "Received from client: " << buffer << std::endl;
+        //std::cout << "Received from client: " << buffer << std::endl;
 
     } else if (bytes_received == 0) {
         // Client disconnected

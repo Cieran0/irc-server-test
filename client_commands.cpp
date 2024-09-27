@@ -7,13 +7,13 @@
 void client::NICK(irc::client_command parsedCommand) {
     info.nickname = parsedCommand.arguments[0];
     server::add_to_client_map(info.nickname, this);
-    std::cout << "Nickname " << info.nickname << std::endl;
+    //std::cout << "Nickname " << info.nickname << std::endl;
 }
 
 void client::USER(irc::client_command parsedCommand) {
     info.username = parsedCommand.arguments[0];
     info.realname = parsedCommand.arguments[1];
-    std::cout << "Real name " << info.realname << std::endl;
+    //std::cout << "Real name " << info.realname << std::endl;
 }
 
 void client::CAP(irc::client_command parsedCommand) {
@@ -22,7 +22,7 @@ void client::CAP(irc::client_command parsedCommand) {
 
 void client::JOIN(irc::client_command parsedCommand) {
     std::string channel_name = parsedCommand.arguments[0];
-            std::cout << "Channel name [" << channel_name << "]" << std::endl;
+            //std::cout << "Channel name [" << channel_name << "]" << std::endl;
 
             server::get_channel(channel_name).join(info.nickname);
             std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
@@ -76,7 +76,7 @@ void client::JOIN(irc::client_command parsedCommand) {
             }
 
             for(std::string user : server::get_channel(channel_name).get_users()) {
-                std::cout << "User: " << user << std::endl;
+                //std::cout << "User: " << user << std::endl;
             }
 }
 
@@ -105,7 +105,7 @@ void client::PING(irc::client_command parsedCommand) {
 
 void client::WHO(irc::client_command parsedCommand) {
     std::string channel_name = parsedCommand.arguments[0];
-    std::cout << "Channel [" << channel_name << "]" << std::endl;
+    //std::cout << "Channel [" << channel_name << "]" << std::endl;
     channel current_channel = server::get_channel(channel_name);
     std::string user_list;
     std::vector<client_info> clients_info;
@@ -124,8 +124,8 @@ void client::MODE(irc::client_command parsedCommand) {
 void client::PRIVMSG(irc::client_command parsedCommand) {
     std::string channel_or_user = parsedCommand.arguments[0];
     std::string text = parsedCommand.arguments[1];
-    std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
-    std::cout << "txt: ["<<text<<"]" << std::endl;
+    //std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
+    //std::cout << "txt: ["<<text<<"]" << std::endl;
     std::unordered_set<std::string> user_list;
     if(channel_or_user[0] == '#') {
         //Its a channel
@@ -141,7 +141,7 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
                         .text(text,true)
                         .build();
     for(std::string nickname : user_list) {
-        std::cout << "USER: " << nickname << std::endl;
+        //std::cout << "USER: " << nickname << std::endl;
         if(nickname != info.nickname)
             server::send_message_to_client(nickname, private_message);
     }

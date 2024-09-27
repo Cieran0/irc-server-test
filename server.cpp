@@ -125,7 +125,6 @@ void server::handle_clients(){
                 bool should_close = false;
 
                 if (it == clients.end()){
-                    std::cout << "Rut roh raggy" << std::endl;
                     continue;
                 }
 
