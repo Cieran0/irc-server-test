@@ -10,11 +10,11 @@
 int server::file_descriptor = 0;
 struct sockaddr_in6 server::address = {};
 std::map<std::string, client*> server::client_map;
-std::vector<std::unique_ptr<client>> server::clients;
+std::map<int, client> server::clients;
 std::vector<std::thread> server::threads;
 std::string server::host_name = "Temp_HOSTNAME";
 std::map<std::string,channel> server::m_channels;
-struct sockaddr_in6 server::client_addr;
+std::queue<std::pair<int,std::string>> server::output_queue;
 
 void server::init(){
 #ifdef _WIN32
@@ -71,32 +71,102 @@ int server::start(){
 }
 
 void server::handle_clients(){
-    struct sockaddr_in6 client_addr;
-    socklen_t client_addr_len = sizeof(client_addr);
-    int client_socket;
+    const int MAX_CLIENTS = 1024;
+    struct pollfd fds[MAX_CLIENTS]; //TODO set this properly
+    int nfds = 1;  // Initially only 1 (the server socket)
+    
+    // Initialize the poll structure
+    fds[0].fd = file_descriptor;  // Server socket
+    fds[0].events = POLLIN;  // Monitor for incoming connections
 
-    while((client_socket = accept(file_descriptor, (struct sockaddr*)&client_addr,&client_addr_len)) >= 0){
-        //struct timeval timeout;
-        //timeout.tv_sec = 60*5;
-        //timeout.tv_usec = 0;
-        //if(setsockopt(client_socket, SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout))<0){
-        //    std::cerr << "Error setting receive timeout for client socket" << std::endl;
-        //}
+    while (true) {
 
-        char ip_buffer[INET6_ADDRSTRLEN]  ={0}; 
-        if (client_addr.sin6_family == AF_INET6) {
-            inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
+        int poll_count = poll(fds, nfds, -1);  // Wait indefinitely for events
+
+        if (poll_count < 0) {
+            std::cerr << "Error in poll()" << std::endl;
+            break;
         }
-        std::cout << "ip: [" << ip_buffer << "]" << std::endl;
 
-        clients.push_back(std::make_unique<client>(client_socket, std::string("::1")));
-        threads.emplace_back(
-            std::thread(
-                [&client_pointer = clients.back()](){
-                    client_pointer->handle();
+        // Check the server socket (listen for new connections)
+        if (fds[0].revents & POLLIN) {
+            struct sockaddr_in6 client_addr;
+            socklen_t client_addr_len = sizeof(client_addr);
+            int client_socket = accept(file_descriptor, (struct sockaddr*)&client_addr, &client_addr_len);
+
+            if (client_socket < 0) {
+                std::cerr << "Error accepting client" << std::endl;
+                continue;
+            }
+
+            // Add new client socket to poll set
+            if (nfds < MAX_CLIENTS) {
+                fds[nfds].fd = client_socket;
+                fds[nfds].events = POLLIN;  // Monitor for incoming data
+                nfds++;
+
+                char ip_buffer[INET6_ADDRSTRLEN] = {0}; 
+                inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
+                std::cout << "New connection from IP: [" << ip_buffer << "]" << std::endl;
+                clients.try_emplace(client_socket, client_socket, std::string(ip_buffer));
+            } else {
+                std::cerr << "Too many clients" << std::endl;
+                close(client_socket);
+            }
+        }
+
+        // Check all other client sockets for incoming data
+        for (int i = 1; i < nfds; ++i) {
+            if (fds[i].revents & POLLIN) {
+                char buffer[1024];
+                int client_socket = fds[i].fd;
+                std::map<int,client>::iterator it = clients.find(fds[i].fd);
+                bool should_close = false;
+
+                if (it == clients.end()){
+                    std::cout << "Rut roh raggy" << std::endl;
+                    continue;
                 }
-            )
-        );
+
+                client& current_client = it->second;
+                should_close = current_client.read_from(buffer, sizeof(buffer));
+
+                if(should_close) {
+                    close(client_socket);
+                    // Remove client from poll set
+                    fds[i].fd = fds[nfds - 1].fd;
+                    fds[i].events = fds[nfds - 1].events;
+                    nfds--;
+                    continue;
+                }   
+                std::string message_recieved(buffer);
+                current_client.handle_message(message_recieved);
+            }
+        }
+    
+        send_all_queued_messages();
+    }
+}
+
+void server::send_all_queued_messages() {
+
+    while (!output_queue.empty())
+    {
+        int client_socket = output_queue.front().first;
+        std::string message = output_queue.front().second;
+
+        output_queue.pop();
+
+        std::map<int,client>::iterator it = clients.find(client_socket);
+
+        if (it == clients.end()){
+            std::cout << "Rut roh raggy aagain" << std::endl;
+            continue;
+        }
+
+        send(client_socket, message.c_str(), message.size(), 0);
+
+        std::cout << "HAY" << std::endl;
     }
 }
 

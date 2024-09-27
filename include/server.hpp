@@ -5,6 +5,7 @@
 #include <thread>
 #include <memory>
 #include <map>
+#include <poll.h>
 #include <channel.hpp>
 
 #ifdef _WIN32
@@ -27,10 +28,12 @@ namespace server{
     extern int file_descriptor;
     extern struct sockaddr_in6 address;
     extern struct sockaddr_in6 client_addr;
-    extern std::vector<std::unique_ptr<client>> clients;
+    extern std::map<int, client> clients;
     extern std::vector<std::thread> threads;
     extern std::string host_name;
     extern std::map<std::string,channel> m_channels;
+    extern std::queue<std::pair<int,std::string>> output_queue;
+
 
     void init();
     void handle_clients();
@@ -40,4 +43,5 @@ namespace server{
     void add_to_client_map(std::string nickname, client* client);
     void send_message_to_client(std::string nickname, std::string message);
     extern std::map<std::string,client*> client_map;
+    void send_all_queued_messages();
 }

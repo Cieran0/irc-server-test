@@ -43,9 +43,10 @@ class client{
         ~client();
 
         client_info get_info();
-        void handle();
-        void send_message(const std::string& message);
+        void handle_message(std::string message);
+        void send_message(std::string message);
         std::string get_next_message();
+        bool read_from(char* buffer, size_t buffer_length);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);

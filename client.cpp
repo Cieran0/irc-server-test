@@ -11,8 +11,6 @@
 
 client::client(int socket, std::string ip) : m_socket(socket), m_is_active(true){
     m_info.ip = ip;
-    m_read_thread = std::thread(handle_reading,this);
-    m_write_thread = std::thread(handle_writing,this);
 }
 
 client::~client() {
@@ -26,9 +24,8 @@ client::~client() {
     close(m_socket);
 }
 
-void client::handle(){
-    while(m_info.username.empty() || m_info.realname.empty()){
-        std::string message = get_next_message();
+void client::handle_message(std::string message){
+    if(m_info.username.empty() || m_info.realname.empty()){
         if(message.starts_with("NICK ")){
             m_info.nickname = message.substr(5);
             server::add_to_client_map(m_info.nickname, this);
@@ -97,8 +94,7 @@ void client::handle(){
     send_message(other_users_message);
     send_message(MOTD_message);
 
-    while(true){
-        std::string message = get_next_message();
+    {
         if(message.starts_with("JOIN ")){
             std::string channel_name = message.substr(5);
             std::cout << "Channel name [" << channel_name << "]" << std::endl;
@@ -179,11 +175,10 @@ void client::handle(){
 }
 
 
-void client::send_message(const std::string& message){
-    std::lock_guard<std::mutex> lock(m_editing_sending_buffer);
-    m_sending_buffer.push(message);
+void client::send_message(std::string message){
+    server::output_queue.emplace(m_socket, message);
 }
-
+/*
 std::string client::get_next_message(){
     std::string message;
     while(m_is_active){
@@ -199,6 +194,7 @@ std::string client::get_next_message(){
     }
     return message;
 }
+
 
 void client::handle_reading(client* instance) {
     char buffer[1024];
@@ -250,6 +246,29 @@ void client::handle_reading(client* instance) {
         }
     }
 }
+*/
+
+bool client::read_from(char* buffer, size_t buffer_length) {
+    bool should_close = false;
+    int bytes_received = recv(m_socket, buffer, buffer_length - 1, 0);
+
+    if (bytes_received > 0) {
+        buffer[bytes_received] = '\0';
+        std::cout << "Received from client: " << buffer << std::endl;
+
+    } else if (bytes_received == 0) {
+        // Client disconnected
+        std::cout << "Client disconnected" << std::endl;
+        should_close = true;
+
+    } else {
+        // Handle socket error
+        std::cerr << "Socket error on client: " << m_socket << std::endl;
+        should_close = true;
+    }
+    return should_close;
+}
+
 /*
 void client::handle_reading(client* instance){
     char buffer[1024];
@@ -279,7 +298,7 @@ void client::handle_reading(client* instance){
         }
     }
 }
-*/
+
 void client::handle_writing(client* instance){
     while(instance->m_is_active){
         std::string response;
@@ -299,6 +318,8 @@ void client::handle_writing(client* instance){
 void client::send(const std::string& message){
     ::send(m_socket, message.c_str(), message.size(), 0);
 }
+
+*/
 
 client_info client::get_info() {
     return m_info;
