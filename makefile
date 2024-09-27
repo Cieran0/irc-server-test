@@ -17,11 +17,11 @@ objects := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 all: $(output)
 
 $(output): $(objects)
-	g++ -std=c++20 $(objects) -Wall $(libs) -o $(output) -Iinclude
+	g++ -std=c++20 $(objects) -Wall $(libs) -o $(output) -O2 -Iinclude
 	rm -f $(objects)
 
 %.o: %.cpp
-	g++ -std=c++20 -c $< -o $@ -Iinclude
+	g++ -std=c++20 -c $< -o $@ -Iinclude -O2
 
 clean: $(ouput)
 	rm -f $(objects)

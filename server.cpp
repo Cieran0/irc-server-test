@@ -82,7 +82,7 @@ void server::handle_clients(){
 
     while (true) {
 
-        int poll_count = poll(fds, nfds, -1);  // Wait indefinitely for events
+        int poll_count = poll(fds, nfds, 16);  // Wait indefinitely for events
 
         if (poll_count < 0) {
             std::cerr << "Error in poll()" << std::endl;
@@ -137,6 +137,12 @@ void server::handle_clients(){
                     //close connection, and remove client from polling.
 
                     close(client_socket);
+                    
+                    for (auto& ch : m_channels)
+                    {
+                        ch.second.remove_user(current_client.get_info().nickname);
+                    }
+                    
                     clients.erase(it);
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
@@ -144,6 +150,7 @@ void server::handle_clients(){
                      }
                     nfds--;
                     std::cout << "Closed connection with client socket: " << client_socket << std::endl;
+                    
                     continue;
                 }   
                 std::string messages_recieved(buffer);
@@ -156,6 +163,10 @@ void server::handle_clients(){
                 if(!current_client.is_active) {
                     //close connection, and remove client from polling.
                     close(client_socket);
+                    for (auto& ch : m_channels)
+                    {
+                        ch.second.remove_user(current_client.get_info().nickname);
+                    }
                     clients.erase(it);
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
@@ -168,6 +179,12 @@ void server::handle_clients(){
             } else if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 std::cerr << "Error or hang-up on socket: " << fds[i].fd << std::endl;
                 close(fds[i].fd);
+                auto it = clients.find(fds[i].fd);
+                client& current_client = it->second;
+                for (auto& ch : m_channels)
+                {
+                        ch.second.remove_user(current_client.get_info().nickname);
+                }
                 clients.erase(fds[i].fd);
 
                 if (i != nfds - 1) {
