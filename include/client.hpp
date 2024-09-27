@@ -13,6 +13,9 @@
 #include <string>
 #include <mutex>
 #include <queue>
+#include <numeric>
+#include <irc.hpp>
+
 
 struct client_info{
     std::string username;
@@ -35,6 +38,20 @@ struct client{
         void send_message(std::string message);
         std::string get_next_message();
         bool read_from(char* buffer, size_t buffer_length);
+
+    private:
+        void welcome();
+        
+        void NICK(irc::client_command parsedCommand);
+        void USER(irc::client_command parsedCommand);
+        void CAP(irc::client_command parsedCommand);
+        void JOIN(irc::client_command parsedCommand);
+        void PART(irc::client_command parsedCommand);
+        void PING(irc::client_command parsedCommand);
+        void WHO(irc::client_command parsedCommand);
+        void MODE(irc::client_command parsedCommand);
+        void PRIVMSG(irc::client_command parsedCommand);
+        void QUIT(irc::client_command parsedCommand);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);
