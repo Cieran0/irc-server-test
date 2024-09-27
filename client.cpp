@@ -4,6 +4,7 @@
 #include "util.hpp"
 #include <message_builder.hpp>
 #include <irc_numberic_replies.hpp>
+#include <irc.hpp>
 
 #ifdef _WIN32
     #define close closesocket
@@ -13,6 +14,7 @@ client::client(int socket, std::string ip) {
     info.ip = ip;
     this->socket = socket;
     is_active = true;
+    welcomed=false;
 }
 
 client::~client() {
@@ -20,29 +22,27 @@ client::~client() {
 }
 
 void client::handle_message(std::string message){
-    std::cout << "[ " << socket << "] sent: " << message << std::endl;
+    irc::client_command parsedCommand = irc::parseClientCommand(message);
+
 
     if(info.username.empty() || info.realname.empty()){
-        if(message.starts_with("NICK ")){
-            info.nickname = message.substr(5);
+        if("NICK" == parsedCommand.command){
+            info.nickname = parsedCommand.arguments[0];
             server::add_to_client_map(info.nickname, this);
             std::cout << "Nickname " << info.nickname << std::endl;
         }
-        else if(message.starts_with("USER ")){
-            info.username = split_string(message," ",0)[1];
-            int name_start = message.find_first_of(':');
-            info.realname = message.substr(name_start+1);
+        else if("USER" == parsedCommand.command){
+            info.username = parsedCommand.arguments[0];
+            info.realname = parsedCommand.arguments[1];
             std::cout << "Real name " << info.realname << std::endl;
         }
-        else if(message.starts_with("CAP ")){
+        else if("CAP" == parsedCommand.command){
             std::cout << message << std::endl;
             send_message(":"+server::host_name+" CAP * LS :\r\n");
         }
+
+        return;
     }
-
-    server::add_to_client_map(info.nickname, this);
-
-        //TODO figure this out
 
     std::string welcome_message = message_builder()
                             .hostname(true)
@@ -84,32 +84,67 @@ void client::handle_message(std::string message){
                             .text("MOTD File missing", true)
                             .build();
 
-    send_message(welcome_message);
-    send_message(host_message);
-    send_message(creation_message);
-    send_message(server_info_message);
-    send_message(other_users_message);
-    send_message(MOTD_message);
+    if(!welcomed) {
+        send_message(welcome_message);
+        send_message(host_message);
+        send_message(creation_message);
+        send_message(server_info_message);
+        send_message(other_users_message);
+        send_message(MOTD_message);
+        welcomed = true;
+    }
+
 
     {
-        if(message.starts_with("JOIN ")){
-            std::string channel_name = message.substr(5);
+        if("JOIN" == parsedCommand.command){
+            std::string channel_name = parsedCommand.arguments[0];
             std::cout << "Channel name [" << channel_name << "]" << std::endl;
+
             server::get_channel(channel_name).join(info.nickname);
             std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
 
-            std::string join_message = ":"+info.nickname+"!"+info.username+"@::1 JOIN "+channel_name+"\r\n";
+            std::string join_message = message_builder()
+                            .user_details(info)
+                            .raw("JOIN", true)
+                            .raw(channel_name,false)
+                            .build();
 
             send_message(join_message);
-            send_message(":"+server::host_name+" 331 "+info.nickname+ " " + channel_name + " :No topic is set\r\n");
+
+            std::string topic_message = message_builder()
+                                            .hostname(true)
+                                            .code(irc::RPL_NOTOPIC)
+                                            .raw(info.nickname, true)
+                                            .raw(channel_name, true)
+                                            .text("No topic is set",true)
+                                            .build();
+                                            
+            send_message(topic_message);
 
             std::string user_raw = std::accumulate(user_list.begin(), user_list.end(),std::string(),
                 [](const std::string& a, const std::string& b) -> std::string{
                     return a+" "+b;
                 });
 
-            send_message(":"+server::host_name+" 353 "+info.nickname + " = " + channel_name+ " :" + user_raw + "\r\n");
-            send_message(":"+server::host_name+" 366 "+info.nickname+ " " + channel_name+ " :End of NAMES list\r\n");
+            std::string user_list_message = message_builder()
+                                                .hostname(true)
+                                                .code(irc::RPL_NAMREPLY)
+                                                .raw(info.nickname, false)
+                                                .raw(" = ",false)
+                                                .raw(channel_name,true)
+                                                .text(user_raw, true)
+                                                .build();
+
+            send_message(user_list_message);
+
+            std::string user_list_end_message = message_builder()
+                                                    .hostname(true)
+                                                    .code(irc::RPL_ENDOFNAMES)
+                                                    .raw(info.nickname, true)
+                                                    .raw(channel_name,true)
+                                                    .text("End of NAMES list", true)
+                                                    .build();
+            send_message(user_list_end_message);
 
             for(std::string nickname : user_list) {
                 if(nickname != info.nickname)
@@ -120,55 +155,81 @@ void client::handle_message(std::string message){
                 std::cout << "User: " << user << std::endl;
             }
         }
-        else if(message.starts_with("PART ")){
-            std::string channel_name = message.substr(5);
+        else if("PART" == parsedCommand.command){
+            std::string channel_name = parsedCommand.arguments[0];
             server::get_channel(channel_name).remove_user(info.nickname);
 
-            send_message(":"+info.nickname+"!"+info.username+"@::1 PART "+channel_name+"\r\n");
+            //TODO: send part message to everyone in channel
+
+            std::string part_message = message_builder()
+                                        .user_details(info)
+                                        .raw("PART",true)
+                                        .raw(channel_name,false)
+                                        .build();
+
+            send_message(part_message);
         }
-        else if(message.starts_with("PING ")){
-            std::string pong_code = message.substr(5);
-            send_message(":"+server::host_name+" PONG "+server::host_name+" :" +pong_code+"\r\n");
+        else if("PING" == parsedCommand.command){
+            std::string pong_code = parsedCommand.arguments[0];
+
+            std::string pong_message = message_builder()
+                                            .hostname(true)
+                                            .raw("PONG",true)
+                                            .hostname(false)
+                                            .text(pong_code,true)
+                                            .build();
+
+            send_message(pong_message);
         }
-        else if(message.starts_with("WHO ")){
-            std::string channel_name = message.substr(4);
+        else if("WHO" == parsedCommand.command){
+            std::string channel_name = parsedCommand.arguments[0];
+
             std::cout << "Channel [" << channel_name << "]" << std::endl;
             channel current_channel = server::get_channel(channel_name);
 
             std::string user_list;
             std::vector<client_info> clients_info;
             for (std::string user : current_channel.get_users()){
-                std::cout << "USER: " << user << std::endl;
                 clients_info.push_back(server::get_client_info(user));
             }
+
             std::string response = generate_who_response(info.nickname, clients_info, channel_name);
-            std::cout << "Response [" << response << "]" << std::endl;
             send_message(response);
-        } else if(message.starts_with("MODE ")) {
+
+        } else if("MODE" == parsedCommand.command) {
+
             std::string channel_name = message.substr(5);
             send_message(":" + server::host_name + " 324 "+info.nickname+" "+channel_name+" +\r\n");
-        } else if (message.starts_with("PRIVMSG ")) {
-            int text_start = message.find_first_of(":") + 1;
-            std::string text = message.substr(text_start);
-            std::string channel_or_user = message.substr(8, text_start - 10);
+
+        } else if ("PRIVMSG" == parsedCommand.command) {
+
+            std::string channel_or_user = parsedCommand.arguments[0];
+            std::string text = parsedCommand.arguments[1];
             std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
             std::cout << "txt: ["<<text<<"]" << std::endl;
 
             std::unordered_set<std::string> user_list;
-            if(channel_or_user.starts_with("#")) {
+            if(channel_or_user[0] == '#') {
+                //Its a channel
                 user_list = server::get_channel(channel_or_user).get_users();
             } else {
+                //Its a dm
                 user_list.emplace(channel_or_user);
             }
 
-            std::string private_message = ":"+info.nickname+"!"+info.username+"@::1 PRIVMSG "+channel_or_user+" :" + text +"\r\n";
+            std::string private_message = message_builder()
+                                .user_details(info)
+                                .raw("PRIVMSG",true)
+                                .raw(channel_or_user,true)
+                                .text(text,true)
+                                .build();
 
             for(std::string nickname : user_list) {
                 std::cout << "USER: " << nickname << std::endl;
                 if(nickname != info.nickname)
                     server::send_message_to_client(nickname, private_message);
             }
-        } else if (message.starts_with("QUIT ")) {
+        } else if ("QUIT" == parsedCommand.command) {
             is_active = false;
         }
     }
@@ -193,7 +254,6 @@ bool client::read_from(char* buffer, size_t buffer_length) {
         should_close = true;
 
     } else {
-        // Handle socket error
         std::cerr << "Socket error on client: " << socket << std::endl;
         should_close = true;
     }
@@ -206,18 +266,17 @@ client_info client::get_info() {
 }
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel) {
+    //TODO: clean this up
     std::ostringstream response;
     
-    // Loop through each client and construct the WHO response (352)
-    for (const auto& client : clients) {
+    for (const client_info& client : clients) {
         response << ":" << server::host_name << " 352 " << requesting_nick << " " 
                  << channel << " " << client.username << " " 
                  << client.ip << " " << server::host_name << " " 
-                 << client.nickname << " H"  // Always 'H' for "Here"
+                 << client.nickname << " H"  //'H' for "Here"
                  << " :0 " << client.realname << "\r\n";
     }
     
-    // Always send the End of WHO list response (315), even if the list is empty
     response << ":" << server::host_name << " 315 " << requesting_nick << " " 
              << channel << " :End of WHO list\r\n";
 

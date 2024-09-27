@@ -57,3 +57,8 @@ std::string message_builder::build() {
     back << "\r\n";
     return back.str();
 }
+
+message_builder& message_builder::user_details(client_info info) {
+    back << ":" << info.nickname << "!" <<info.username << "@" << info.ip << " "; 
+    return *this;
+}

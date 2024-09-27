@@ -24,6 +24,7 @@ struct client_info{
 struct client{
         bool is_active;
         int socket;
+        bool welcomed=false;
         client_info info;
 
         client(int socket, std::string client_ip);
