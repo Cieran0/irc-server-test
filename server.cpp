@@ -82,7 +82,7 @@ void server::handle_clients(){
 
     while (true) {
 
-        int poll_count = poll(fds, nfds, 16);  // Wait indefinitely for events
+        int poll_count = poll(fds, nfds, 5000);  // Wait indefinitely for events
 
         if (poll_count < 0) {
             std::cerr << "Error in poll()" << std::endl;
