@@ -17,6 +17,9 @@ void client::USER(irc::client_command parsedCommand) {
 }
 
 void client::CAP(irc::client_command parsedCommand) {
+    if( parsedCommand.arguments[0] == "END") {
+        return;
+    }
     send_message(":"+server::host_name+" CAP * LS :\r\n");
 }
 
