@@ -5,15 +5,14 @@
 #include <thread>
 #include <memory>
 #include <map>
-#include <poll.h>
 #include <channel.hpp>
 
 #ifdef _WIN32
     #include <winsock2.h>
     #include <ws2tcpip.h>
-    #error "Not working on windows"
     //#pragma comment(lib, "Ws2_32.lib")
 #else
+    #include <poll.h>
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <netinet/in.h>

@@ -22,13 +22,16 @@ int server::init(){
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (result != 0) {
         std::cerr << "WSAStartup failed: " << result << std::endl;
-        return (EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 #endif
 
     file_descriptor = socket(AF_INET6, SOCK_STREAM, 0);
     if(file_descriptor < 0){
         std::cerr << "Error creating socket" << std::endl;
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return EXIT_FAILURE;
     }
 
@@ -36,9 +39,11 @@ int server::init(){
     if(setsockopt(file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval)) < 0){
         std::cerr << "Error setting socket options" << std::endl;
         close(file_descriptor);
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return EXIT_FAILURE;
     }
-
 
     memset(&address,0,sizeof(address));
     address.sin6_family = AF_INET6;
@@ -48,16 +53,22 @@ int server::init(){
     if(bind(file_descriptor, (struct sockaddr*)&address,sizeof(address))<0){
         std::cerr << "Error binding socket" << std::endl;
         close(file_descriptor);
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return EXIT_FAILURE;
     }
 
-    if(listen(file_descriptor,3)<0){
+    if(listen(file_descriptor, 3)<0){
         std::cerr << "Error listening on socket" << std::endl;
         close(file_descriptor);
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return EXIT_FAILURE;
     }
 
-    std::cout<< "Server started on port: " << PORT << " (IPv6)" << std::endl;
+    std::cout << "Server started on port: " << PORT << " (IPv6)" << std::endl;
 
     return 0;
 }
@@ -68,6 +79,9 @@ int server::main(){
     }
 
     handle_clients();
+#ifdef _WIN32
+    WSACleanup(); // Ensure cleanup when server shuts down.
+#endif
     return 0;
 }
 
@@ -75,14 +89,18 @@ void server::handle_clients(){
     const int MAX_CLIENTS = 1024;
     struct pollfd fds[MAX_CLIENTS]; //TODO set this properly
     int nfds = 1;  // Initially only 1 (the server socket)
-    
+
     // Initialize the poll structure
     fds[0].fd = file_descriptor;  // Server socket
     fds[0].events = POLLIN;  // Monitor for incoming connections
 
     while (true) {
-
-        int poll_count = poll(fds, nfds, 5000);  // Wait indefinitely for events
+        int poll_count;
+    #ifdef _WIN32
+        poll_count = WSAPoll(fds, nfds, 5000); // Windows-specific poll
+    #else
+        poll_count = poll(fds, nfds, 5000);  // POSIX poll
+    #endif
 
         if (poll_count < 0) {
             std::cerr << "Error in poll()" << std::endl;
@@ -132,45 +150,38 @@ void server::handle_clients(){
                 should_close = current_client.read_from(buffer, sizeof(buffer));
 
                 if(should_close) {
-
-                    //close connection, and remove client from polling.
-
+                    // Close connection, and remove client from polling.
                     close(client_socket);
-                    
-                    for (auto& ch : m_channels)
-                    {
+                    for (auto& ch : m_channels) {
                         ch.second.remove_user(current_client.get_info().nickname);
                     }
-                    
                     clients.erase(it);
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
                         fds[i].events = fds[nfds - 1].events;
-                     }
+                    }
                     nfds--;
                     std::cout << "Closed connection with client socket: " << client_socket << std::endl;
-                    
                     continue;
-                }   
-                std::string messages_recieved(buffer);
+                }
 
+                std::string messages_recieved(buffer);
                 std::vector<std::string> messages = split_string(messages_recieved, "\r\n", false);
-                for(const std::string& message: messages){
+                for(const std::string& message : messages) {
                     current_client.handle_message(message);
                 }
 
                 if(!current_client.is_active) {
-                    //close connection, and remove client from polling.
+                    // Close connection, and remove client from polling.
                     close(client_socket);
-                    for (auto& ch : m_channels)
-                    {
+                    for (auto& ch : m_channels) {
                         ch.second.remove_user(current_client.get_info().nickname);
                     }
                     clients.erase(it);
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
                         fds[i].events = fds[nfds - 1].events;
-                     }
+                    }
                     nfds--;
                     std::cout << "Closed connection with client socket: " << client_socket << std::endl;
                 }
@@ -180,9 +191,8 @@ void server::handle_clients(){
                 close(fds[i].fd);
                 auto it = clients.find(fds[i].fd);
                 client& current_client = it->second;
-                for (auto& ch : m_channels)
-                {
-                        ch.second.remove_user(current_client.get_info().nickname);
+                for (auto& ch : m_channels) {
+                    ch.second.remove_user(current_client.get_info().nickname);
                 }
                 clients.erase(fds[i].fd);
 
@@ -193,7 +203,7 @@ void server::handle_clients(){
                 nfds--;
             }
         }
-    
+
         send_all_queued_messages();
     }
 }
