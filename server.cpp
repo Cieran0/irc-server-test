@@ -152,10 +152,12 @@ void server::handle_clients(){
                 if(should_close) {
                     // Close connection, and remove client from polling.
                     close(client_socket);
+                    std::string nickname = current_client.get_info().nickname;
                     for (auto& ch : m_channels) {
-                        ch.second.remove_user(current_client.get_info().nickname);
+                        ch.second.remove_user(nickname);
                     }
                     clients.erase(it);
+                    client_map.erase(nickname);
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
                         fds[i].events = fds[nfds - 1].events;
@@ -173,11 +175,14 @@ void server::handle_clients(){
 
                 if(!current_client.is_active) {
                     // Close connection, and remove client from polling.
+                    std::string nickname = current_client.get_info().nickname;
                     close(client_socket);
                     for (auto& ch : m_channels) {
-                        ch.second.remove_user(current_client.get_info().nickname);
+                        ch.second.remove_user(nickname);
                     }
                     clients.erase(it);
+                    client_map.erase(nickname);
+
                     if (i != nfds - 1) {
                         fds[i].fd = fds[nfds - 1].fd;
                         fds[i].events = fds[nfds - 1].events;
@@ -191,10 +196,13 @@ void server::handle_clients(){
                 close(fds[i].fd);
                 auto it = clients.find(fds[i].fd);
                 client& current_client = it->second;
+                std::string nickname = current_client.get_info().nickname;
+
                 for (auto& ch : m_channels) {
-                    ch.second.remove_user(current_client.get_info().nickname);
+                    ch.second.remove_user(nickname);
                 }
                 clients.erase(fds[i].fd);
+                client_map.erase(nickname);
 
                 if (i != nfds - 1) {
                     fds[i].fd = fds[nfds - 1].fd;

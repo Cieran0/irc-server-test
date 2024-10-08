@@ -9,6 +9,8 @@
     #define close closesocket
 #endif
 
+const std::string VERSION = "IRC-SERVER-1.0";
+
 client::client(int socket, std::string ip) {
     info.ip = ip;
     this->socket = socket;
@@ -34,7 +36,7 @@ void client::welcome() {
                             .raw(info.nickname, true)
                             .text("Your host is ", true)
                             .hostname(false)
-                            .text(", running version miniircd-2.3", false)
+                            .text(", running version " + VERSION, false)
                             .build();
     std::string creation_message = message_builder()
                             .hostname(true)
@@ -47,13 +49,15 @@ void client::welcome() {
                             .code(irc::RPL_MYINFO)
                             .raw(info.nickname, true)
                             .hostname(false)
-                            .text(" miniircd-2.3 o o", false)
+                            .text(VERSION +" o o", false)
                             .build();
+
+    std::string clients_message = "There are " + std::to_string(server::clients.size());
     std::string other_users_message = message_builder()
                             .hostname(true)
                             .code(irc::RPL_LUSERCLIENT)
                             .raw(info.nickname, true)
-                            .text("There are 2 users and 0 services on 1 server", true)
+                            .text(clients_message + " users and 0 services on 1 server", true)
                             .build();
     std::string MOTD_message = message_builder()
                             .hostname(true)
@@ -76,8 +80,8 @@ void client::welcome() {
 void client::handle_message(std::string message){
     irc::client_command parsedCommand = irc::parseClientCommand(message);
 
-
-    if(info.username.empty() || info.realname.empty()){
+    //TODO: clean up this mess!
+    if(info.username.empty() || info.realname.empty() || info.nickname.empty()){
         if("NICK" == parsedCommand.command){
             NICK(parsedCommand);
         }
@@ -87,7 +91,9 @@ void client::handle_message(std::string message){
         else if("CAP" == parsedCommand.command){
             CAP(parsedCommand);
         }
-
+        if(!(info.username.empty() || info.realname.empty() || info.nickname.empty()) && !welcomed) {
+            welcome();
+        }
         return;
     }
 
@@ -120,8 +126,14 @@ void client::handle_message(std::string message){
     else if("CAP" == parsedCommand.command) {
         CAP(parsedCommand);
     }
+    else if("NICK" == parsedCommand.command){
+        NICK(parsedCommand);
+    }
+    else if("USER" == parsedCommand.command){
+        USER(parsedCommand);
+    }
     else {
-        std::cout << "Unhandled command [" << parsedCommand.command << "] !" << std::endl;
+        UNKNOWN(parsedCommand);
     }
 }
 

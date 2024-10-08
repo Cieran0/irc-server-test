@@ -52,6 +52,9 @@ struct client{
         void MODE(irc::client_command parsedCommand);
         void PRIVMSG(irc::client_command parsedCommand);
         void QUIT(irc::client_command parsedCommand);
+        void UNKNOWN(irc::client_command parsedCommand);
+
+        bool correct_number_of_parameters(irc::client_command parsedCommand, size_t expected);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);

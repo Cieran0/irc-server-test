@@ -4,13 +4,69 @@
 #include <message_builder.hpp>
 #include <irc_numberic_replies.hpp>
 
+bool client::correct_number_of_parameters(irc::client_command parsedCommand, size_t expected) {
+
+    size_t got = parsedCommand.arguments.size();
+
+    std::cout << "Expected [ " << expected << "] Got [" << got << "]" << std::endl;
+
+    if(got < expected) {
+        std::string too_few_parameters = message_builder()
+                                    .hostname(true)
+                                    .code(irc::ERR_NEEDMOREPARAMS)
+                                    .raw(parsedCommand.command,true)
+                                    .text("Not enough parameters",true)
+                                    .build();
+        send_message(too_few_parameters);
+        return false;
+    } else if (got > expected) {
+        std::string too_many_parameters = message_builder()
+                                    .hostname(true)
+                                    .code(irc::ERR_UNKNOWNCOMMAND)
+                                    .raw(parsedCommand.command,true)
+                                    .text("Too many parameters!",true)
+                                    .build();
+        send_message(too_many_parameters);
+        return false;
+    }
+
+    return true;
+}
+
 void client::NICK(irc::client_command parsedCommand) {
-    info.nickname = parsedCommand.arguments[0];
+    if(!correct_number_of_parameters(parsedCommand,1))
+        return;
+
+    if(!info.nickname.empty()) {
+        //Ignore if nickname already set.
+        return;
+    }
+    
+    std::string nickname = parsedCommand.arguments[0]; 
+    if(server::client_map.contains(nickname)) {
+        std::string name_in_use = message_builder()
+                                    .hostname(true)
+                                    .code(irc::ERR_NICKNAMEINUSE)
+                                    .raw(nickname, true)
+                                    .text("Nickname is already in use", true)
+                                    .build();
+
+        send_message(name_in_use);
+        return;
+    }
+
+    info.nickname = nickname;
     server::add_to_client_map(info.nickname, this);
-    //std::cout << "Nickname " << info.nickname << std::endl;
 }
 
 void client::USER(irc::client_command parsedCommand) {
+    if(!correct_number_of_parameters(parsedCommand,4))
+        return;
+
+    if(!info.username.empty() && !info.realname.empty()) {
+        return;
+    }
+
     info.username = parsedCommand.arguments[0];
     info.realname = parsedCommand.arguments[1];
     //std::cout << "Real name " << info.realname << std::endl;
@@ -23,67 +79,91 @@ void client::CAP(irc::client_command parsedCommand) {
     send_message(":"+server::host_name+" CAP * LS :\r\n");
 }
 
-void client::JOIN(irc::client_command parsedCommand) {
+void client::JOIN(irc::client_command parsedCommand)
+{
+    if(!correct_number_of_parameters(parsedCommand,1))
+        return;
+
     std::string channel_name = parsedCommand.arguments[0];
-            //std::cout << "Channel name [" << channel_name << "]" << std::endl;
 
-            server::get_channel(channel_name).join(info.nickname);
-            std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
+    if(channel_name[0] != '#') {
+    std::string bad_channel_name = message_builder()
+                                    .hostname(true)
+                                    .code(irc::ERR_NOSUCHCHANNEL)
+                                    .raw(info.nickname, true)
+                                    .raw(channel_name, true)
+                                    .text("Invalid channel name", true)
+                                    .build();
+        send_message(bad_channel_name);
+        return;
+    }
 
-            std::string join_message = message_builder()
-                            .user_details(info)
-                            .raw("JOIN", true)
-                            .raw(channel_name,false)
-                            .build();
+    server::get_channel(channel_name).join(info.nickname);
+    std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
 
-            send_message(join_message);
+    std::string join_message = message_builder()
+                                   .user_details(info)
+                                   .raw("JOIN", true)
+                                   .raw(channel_name, false)
+                                   .build();
 
-            std::string topic_message = message_builder()
+    send_message(join_message);
+
+    std::string topic_message = message_builder()
+                                    .hostname(true)
+                                    .code(irc::RPL_NOTOPIC)
+                                    .raw(info.nickname, true)
+                                    .raw(channel_name, true)
+                                    .text("No topic is set", true)
+                                    .build();
+
+    send_message(topic_message);
+
+    std::string user_raw = std::accumulate(user_list.begin(), user_list.end(), std::string(),
+                                           [](const std::string &a, const std::string &b) -> std::string
+                                           {
+                                               return a + " " + b;
+                                           });
+
+    std::string user_list_message = message_builder()
+                                        .hostname(true)
+                                        .code(irc::RPL_NAMREPLY)
+                                        .raw(info.nickname, false)
+                                        .raw(" = ", false)
+                                        .raw(channel_name, true)
+                                        .text(user_raw, true)
+                                        .build();
+
+    send_message(user_list_message);
+
+    std::string user_list_end_message = message_builder()
                                             .hostname(true)
-                                            .code(irc::RPL_NOTOPIC)
+                                            .code(irc::RPL_ENDOFNAMES)
                                             .raw(info.nickname, true)
                                             .raw(channel_name, true)
-                                            .text("No topic is set",true)
+                                            .text("End of NAMES list", true)
                                             .build();
-                                            
-            send_message(topic_message);
 
-            std::string user_raw = std::accumulate(user_list.begin(), user_list.end(),std::string(),
-                [](const std::string& a, const std::string& b) -> std::string{
-                    return a+" "+b;
-                });
+    send_message(user_list_end_message);
 
-            std::string user_list_message = message_builder()
-                                                .hostname(true)
-                                                .code(irc::RPL_NAMREPLY)
-                                                .raw(info.nickname, false)
-                                                .raw(" = ",false)
-                                                .raw(channel_name,true)
-                                                .text(user_raw, true)
-                                                .build();
+    for (std::string nickname : user_list)
+    {
+        if (nickname != info.nickname)
+            server::send_message_to_client(nickname, join_message);
+    }
 
-            send_message(user_list_message);
-
-            std::string user_list_end_message = message_builder()
-                                                    .hostname(true)
-                                                    .code(irc::RPL_ENDOFNAMES)
-                                                    .raw(info.nickname, true)
-                                                    .raw(channel_name,true)
-                                                    .text("End of NAMES list", true)
-                                                    .build();
-            send_message(user_list_end_message);
-
-            for(std::string nickname : user_list) {
-                if(nickname != info.nickname)
-                    server::send_message_to_client(nickname, join_message);
-            }
-
-            for(std::string user : server::get_channel(channel_name).get_users()) {
-                //std::cout << "User: " << user << std::endl;
-            }
+    for (std::string user : server::get_channel(channel_name).get_users())
+    {
+        // std::cout << "User: " << user << std::endl;
+    }
 }
 
 void client::PART(irc::client_command parsedCommand) {
+    //TODO: check in channel
+
+    if(!correct_number_of_parameters(parsedCommand,1))
+        return;
+
     std::string channel_name = parsedCommand.arguments[0];
     server::get_channel(channel_name).remove_user(info.nickname);
     //TODO: send part message to everyone in channel
@@ -92,7 +172,15 @@ void client::PART(irc::client_command parsedCommand) {
                                 .raw("PART",true)
                                 .raw(channel_name,false)
                                 .build();
+
     send_message(part_message);
+
+    std::unordered_set<std::string> user_list = server::get_channel(channel_name).get_users();
+    for(std::string nickname : user_list) {
+        if(nickname != info.nickname)
+            server::send_message_to_client(nickname, part_message);
+    }
+
 }
 
 void client::PING(irc::client_command parsedCommand) {
@@ -107,6 +195,10 @@ void client::PING(irc::client_command parsedCommand) {
 }
 
 void client::WHO(irc::client_command parsedCommand) {
+    //TODO: check in channel
+    if(!correct_number_of_parameters(parsedCommand,1))
+        return;
+
     std::string channel_name = parsedCommand.arguments[0];
     //std::cout << "Channel [" << channel_name << "]" << std::endl;
     channel current_channel = server::get_channel(channel_name);
@@ -125,6 +217,9 @@ void client::MODE(irc::client_command parsedCommand) {
 }
 
 void client::PRIVMSG(irc::client_command parsedCommand) {
+    if(!correct_number_of_parameters(parsedCommand,2))
+        return;
+
     std::string channel_or_user = parsedCommand.arguments[0];
     std::string text = parsedCommand.arguments[1];
     //std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
@@ -132,9 +227,11 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
     std::unordered_set<std::string> user_list;
     if(channel_or_user[0] == '#') {
         //Its a channel
+        //TODO: check in channel
         user_list = server::get_channel(channel_or_user).get_users();
     } else {
         //Its a dm
+        //TODO: check user exists!!!
         user_list.emplace(channel_or_user);
     }
     std::string private_message = message_builder()
@@ -151,5 +248,32 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
 }
 
 void client::QUIT(irc::client_command parsedCommand) {
+    if(!correct_number_of_parameters(parsedCommand, 1)) {
+        return;
+    }
+
     is_active = false;
+
+    std::string reason = parsedCommand.arguments[0];
+
+    std::string quit_message =  message_builder()
+                        .user_details(info)
+                        .raw("QUIT", true)
+                        .text(reason,true)
+                        .build();
+
+    for(const auto user : server::client_map) {
+        server::send_message_to_client(user.first, quit_message);
+    }
+    
+}
+
+void client::UNKNOWN(irc::client_command parsedCommand) {
+    std::string unknown_message = message_builder()
+                                    .hostname(true)
+                                    .code(irc::ERR_UNKNOWNCOMMAND)
+                                    .raw(parsedCommand.command,true)
+                                    .text("Unknown command",true)
+                                    .build();
+    send_message(unknown_message);
 }
