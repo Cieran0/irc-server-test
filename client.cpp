@@ -12,6 +12,7 @@
 const std::string VERSION = "IRC-SERVER-1.0";
 
 client::client(int socket, std::string ip) {
+    last_active = std::chrono::system_clock::now();
     info.ip = ip;
     this->socket = socket;
     is_active = true;

@@ -226,6 +226,24 @@ void server::handle_clients(){
                 if (last_active_in_seconds.count() >= 60.0) {
                     it->second.is_active = false;
                 }
+
+                if(!it->second.is_active) {
+                    // Close connection, and remove client from polling.
+                    std::string nickname = it->second.get_info().nickname;
+                    close(client_socket);
+                    for (auto& ch : m_channels) {
+                        ch.second.remove_user(nickname);
+                    }
+                    clients.erase(it);
+                    client_map.erase(nickname);
+
+                    if (i != nfds - 1) {
+                        fds[i].fd = fds[nfds - 1].fd;
+                        fds[i].events = fds[nfds - 1].events;
+                    }
+                    nfds--;
+                    std::cout << "Connection timed out with client, fd = " << client_socket << std::endl;
+                }
             }
         }
 
