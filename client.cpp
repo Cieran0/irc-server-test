@@ -93,7 +93,7 @@ void client::handle_message(std::string message){
         else if("CAP" == parsedCommand.command){
             CAP(parsedCommand);
         }
-        std::cout << "username: " << info.username << ", realname: " << info.realname << ", nickname: " << info.nickname << std::endl;
+        //std::cout << "username: " << info.username << ", realname: " << info.realname << ", nickname: " << info.nickname << std::endl;
 
         if(!(info.username.empty() || info.realname.empty() || info.nickname.empty()) && !welcomed) {
             welcome();
@@ -150,7 +150,7 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        std::cout << "R[" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
+        //std::cout << "R[" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
 
     } else if (bytes_received == 0) {
         // Client disconnected
