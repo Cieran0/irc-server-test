@@ -19,3 +19,20 @@ std::vector<std::string> split_string(const std::string& input, const std::strin
     }
     return split_strings;
 }
+
+std::string decode(std::string to_decode) {
+    std::string decoded_string;
+
+    // Loop through each character in the input string
+    for (char c : to_decode) {
+        if (c == '\n') {
+            decoded_string += "\\n";  // Replace newline with literal '\n'
+        } else if (c == '\r') {
+            decoded_string += "\\r";  // Replace carriage return with literal '\r'
+        } else {
+            decoded_string += c;      // Otherwise, add the character as it is
+        }
+    }
+
+    return decoded_string;
+}

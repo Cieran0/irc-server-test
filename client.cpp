@@ -78,6 +78,7 @@ void client::welcome() {
 }
 
 void client::handle_message(std::string message){
+    std::cout << message << std::endl;
     irc::client_command parsedCommand = irc::parseClientCommand(message);
 
     //TODO: clean up this mess!
@@ -150,7 +151,7 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        //std::cout << "Received from client: " << buffer << std::endl;
+        std::cout << "R[" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
 
     } else if (bytes_received == 0) {
         // Client disconnected
