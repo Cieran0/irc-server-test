@@ -89,7 +89,7 @@ void client::JOIN(irc::client_command parsedCommand)
     if(channel_name[0] != '#') {
     std::string bad_channel_name = message_builder()
                                     .hostname(true)
-                                    .code(irc::ERR_NOSUCHCHANNEL)
+                                    .code(irc::ERR_CANNOTSENDTOCHAN)
                                     .raw(info.nickname, true)
                                     .raw(channel_name, true)
                                     .text("Invalid channel name", true)
@@ -159,14 +159,38 @@ void client::JOIN(irc::client_command parsedCommand)
 }
 
 void client::PART(irc::client_command parsedCommand) {
-    //TODO: check in channel
 
     if(!correct_number_of_parameters(parsedCommand,1))
         return;
 
     std::string channel_name = parsedCommand.arguments[0];
+
+    if(channel_name[0] != '#') {
+        std::string bad_channel_name = message_builder()
+                                        .hostname(true)
+                                        .code(irc::ERR_CANNOTSENDTOCHAN)
+                                        .raw(info.nickname, true)
+                                        .raw(channel_name, true)
+                                        .text("Invalid channel name", true)
+                                        .build();
+        send_message(bad_channel_name);
+        return;
+    }
+
+    if(!server::is_user_in_channel(info.nickname, channel_name)) {
+        std::string bad_channel_name = message_builder()
+                                        .hostname(true)
+                                        .code(irc::ERR_CANNOTSENDTOCHAN)
+                                        .raw(info.nickname, true)
+                                        .raw(channel_name, true)
+                                        .text("Invalid channel name", true)
+                                        .build();
+        send_message(bad_channel_name);
+        return;
+    }
+
     server::get_channel(channel_name).remove_user(info.nickname);
-    //TODO: send part message to everyone in channel
+
     std::string part_message = message_builder()
                                 .user_details(info)
                                 .raw("PART",true)
@@ -195,11 +219,24 @@ void client::PING(irc::client_command parsedCommand) {
 }
 
 void client::WHO(irc::client_command parsedCommand) {
-    //TODO: check in channel
+
     if(!correct_number_of_parameters(parsedCommand,1))
         return;
 
     std::string channel_name = parsedCommand.arguments[0];
+
+    if(!server::is_user_in_channel(info.nickname, channel_name)) {
+        std::string bad_channel_name = message_builder()
+                                        .hostname(true)
+                                        .code(irc::ERR_CANNOTSENDTOCHAN)
+                                        .raw(info.nickname, true)
+                                        .raw(channel_name, true)
+                                        .text("Invalid channel name", true)
+                                        .build();
+        send_message(bad_channel_name);
+        return;
+    }
+
     //std::cout << "Channel [" << channel_name << "]" << std::endl;
     channel current_channel = server::get_channel(channel_name);
     std::string user_list;
@@ -227,11 +264,33 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
     std::unordered_set<std::string> user_list;
     if(channel_or_user[0] == '#') {
         //Its a channel
-        //TODO: check in channel
+        if(!server::is_user_in_channel(info.nickname, channel_or_user)) {
+            std::string bad_channel_name = message_builder()
+                                            .hostname(true)
+                                            .code(irc::ERR_CANNOTSENDTOCHAN)
+                                            .raw(info.nickname, true)
+                                            .raw(channel_or_user, true)
+                                            .text("Invalid channel name", true)
+                                            .build();
+            send_message(bad_channel_name);
+            return;
+        }
+
         user_list = server::get_channel(channel_or_user).get_users();
     } else {
         //Its a dm
-        //TODO: check user exists!!!
+        if(!server::client_map.contains(channel_or_user)) {
+            std::string bad_channel_name = message_builder()
+                                            .hostname(true)
+                                            .code(irc::ERR_NOSUCHNICK)
+                                            .raw(info.nickname, true)
+                                            .raw(channel_or_user, true)
+                                            .text("Nickname not in use", true)
+                                            .build();
+            send_message(bad_channel_name);
+            return;
+        }
+        
         user_list.emplace(channel_or_user);
     }
     std::string private_message = message_builder()

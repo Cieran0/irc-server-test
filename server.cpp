@@ -87,7 +87,7 @@ int server::main(){
 
 void server::handle_clients(){
     const int MAX_CLIENTS = 1024;
-    struct pollfd fds[MAX_CLIENTS]; //TODO set this properly
+    struct pollfd fds[MAX_CLIENTS];
     int nfds = 1;  // Initially only 1 (the server socket)
 
     // Initialize the poll structure
@@ -210,6 +210,23 @@ void server::handle_clients(){
                 }
                 nfds--;
             }
+            else {
+                int client_socket = fds[i].fd;
+                std::map<int,client>::iterator it = clients.find(fds[i].fd);
+                bool should_close = false;
+
+                if (it == clients.end()){
+                    continue;
+                }
+
+                std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+                std::chrono::duration<double> last_active_in_seconds = now - it->second.last_active;
+
+                //More than 1 minute not active
+                if (last_active_in_seconds.count() >= 60.0) {
+                    it->second.is_active = false;
+                }
+            }
         }
 
         send_all_queued_messages();
@@ -254,4 +271,8 @@ void server::add_to_client_map(std::string nickname, client* client){
 
 void server::send_message_to_client(std::string nickname, std::string message){
     client_map[nickname]->send_message(message);
+}
+
+bool server::is_user_in_channel(std::string user, std::string channel) {
+    return get_channel(channel).is_in(user);
 }

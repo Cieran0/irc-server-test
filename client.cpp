@@ -143,6 +143,8 @@ void client::send_message(std::string message){
 }
 
 bool client::read_from(char* buffer, size_t buffer_length) {
+    last_active = std::chrono::system_clock::now();
+    is_active = true;
     bool should_close = false;
     int bytes_received = recv(socket, buffer, buffer_length - 1, 0);
 

@@ -46,4 +46,5 @@ namespace server{
     void send_message_to_client(std::string nickname, std::string message);
     extern std::map<std::string,client*> client_map;
     void send_all_queued_messages();
+    bool is_user_in_channel(std::string nickname, std::string channel);
 }
