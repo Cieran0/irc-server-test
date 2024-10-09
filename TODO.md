@@ -4,3 +4,8 @@
 [X] - Server detects disconnected or unresponsive clients and removes them adequately
 
 [X] - Server handles most common errors related to private messages
+
+[?] - Clean handle_message()
+[?] - Remove debug messages
+
+[?] - COMMENT CODE

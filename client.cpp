@@ -78,7 +78,7 @@ void client::welcome() {
 }
 
 void client::handle_message(std::string message){
-    std::cout << message << std::endl;
+    //std::cout << message << std::endl;
     irc::client_command parsedCommand = irc::parseClientCommand(message);
 
     //TODO: clean up this mess!
@@ -92,14 +92,12 @@ void client::handle_message(std::string message){
         else if("CAP" == parsedCommand.command){
             CAP(parsedCommand);
         }
+        std::cout << "username: " << info.username << ", realname: " << info.realname << ", nickname: " << info.nickname << std::endl;
+
         if(!(info.username.empty() || info.realname.empty() || info.nickname.empty()) && !welcomed) {
             welcome();
         }
         return;
-    }
-
-    if(!welcomed) {
-        welcome();
     }
 
 

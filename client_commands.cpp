@@ -8,7 +8,7 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
 
     size_t got = parsedCommand.arguments.size();
 
-    std::cout << "Expected [ " << expected << "] Got [" << got << "]" << std::endl;
+    //std::cout << "Expected [ " << expected << "] Got [" << got << "]" << std::endl;
 
     if(got < expected) {
         std::string too_few_parameters = message_builder()
