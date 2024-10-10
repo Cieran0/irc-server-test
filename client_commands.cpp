@@ -8,8 +8,6 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
 
     size_t got = parsedCommand.arguments.size();
 
-    //std::cout << "Expected [ " << expected << "] Got [" << got << "]" << std::endl;
-
     if(got < expected) {
         std::string too_few_parameters = message_builder()
                                     .hostname(true)
@@ -69,7 +67,6 @@ void client::USER(irc::client_command parsedCommand) {
 
     info.username = parsedCommand.arguments[0];
     info.realname = parsedCommand.arguments[1];
-    //std::cout << "Real name " << info.realname << std::endl;
 }
 
 void client::CAP(irc::client_command parsedCommand) {
@@ -237,7 +234,6 @@ void client::WHO(irc::client_command parsedCommand) {
         return;
     }
 
-    //std::cout << "Channel [" << channel_name << "]" << std::endl;
     channel current_channel = server::get_channel(channel_name);
     std::string user_list;
     std::vector<client_info> clients_info;
@@ -259,8 +255,7 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
 
     std::string channel_or_user = parsedCommand.arguments[0];
     std::string text = parsedCommand.arguments[1];
-    //std::cout << "ch : ["<<channel_or_user<<"]" << std::endl;
-    //std::cout << "txt: ["<<text<<"]" << std::endl;
+
     std::unordered_set<std::string> user_list;
     if(channel_or_user[0] == '#') {
         //Its a channel
@@ -300,7 +295,6 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
                         .text(text)
                         .build();
     for(std::string nickname : user_list) {
-        //std::cout << "USER: " << nickname << std::endl;
         if(nickname != info.nickname)
             server::send_message_to_client(nickname, private_message);
     }
