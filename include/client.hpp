@@ -16,6 +16,7 @@
 #include <numeric>
 #include <irc.hpp>
 #include <chrono>
+#include <message_builder.hpp>
 
 struct client_info{
     std::string username;
@@ -35,9 +36,8 @@ struct client{
 
         client_info get_info();
         bool info_empty();
-        void handle_message(std::string message);
-        void send_message(std::string message);
-        std::string get_next_message();
+        void handle_message(std::string raw_message);
+        void send_message(message to_send);
         bool read_from(char* buffer, size_t buffer_length);
 
         std::chrono::time_point<std::chrono::system_clock> last_active;

@@ -53,7 +53,7 @@ namespace server{
     channel &get_channel(std::string channel_name);
     int main(bool debug);
     void add_to_client_map(std::string nickname, client* client);
-    void send_message_to_client(std::string nickname, std::string message);
+    void send_message_to_client(std::string nickname, message to_send);
     extern std::map<std::string,client*> client_map;
     void send_all_queued_messages();
     bool is_user_in_channel(std::string nickname, std::string channel);

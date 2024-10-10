@@ -42,7 +42,7 @@ message_builder& message_builder::text(std::string text) {
     return *this;
 }
 
-std::string message_builder::build() {
+message message_builder::build() {
     back << "\r\n";
     return back.str();
 }

@@ -96,8 +96,8 @@ bool client::info_empty() {
 /*
     Takes a message from a client and responds to it appropriately.
 */
-void client::handle_message(std::string message){
-    irc::client_command command = irc::parse_client_command(message);
+void client::handle_message(std::string raw_message){
+    irc::client_command command = irc::parse_client_command(raw_message);
 
     if(info_empty()){
         if("NICK" == command){
@@ -154,8 +154,8 @@ void client::handle_message(std::string message){
     }
 }
 
-void client::send_message(std::string message){
-    server::output_queue.emplace(socket, message);
+void client::send_message(message to_send){
+    server::output_queue.emplace(socket, to_send);
 }
 
 /*

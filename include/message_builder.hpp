@@ -3,6 +3,7 @@
 #include <sstream>
 #include <client.hpp>
 
+typedef std::string message;
 
 class message_builder
 {
@@ -18,6 +19,7 @@ public:
     message_builder& text(std::string text);
     message_builder& user_details(client_info info);
 
-    std::string build();
+    message build();
 };
+
 

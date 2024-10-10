@@ -232,9 +232,9 @@ void server::listen_to_client(int i)
 
     std::string messages_recieved(buffer);
     std::vector<std::string> messages = split_string(messages_recieved, "\r\n", false);
-    for (const std::string &message : messages)
+    for (const std::string &raw_message : messages)
     {
-        current_client.handle_message(message);
+        current_client.handle_message(raw_message);
     }
 
     if (!current_client.is_active)
@@ -313,7 +313,7 @@ void server::send_all_queued_messages() {
     while (!output_queue.empty())
     {
         int client_socket = output_queue.front().first;
-        std::string message = output_queue.front().second;
+        message to_send = output_queue.front().second;
 
         output_queue.pop();
 
@@ -326,10 +326,10 @@ void server::send_all_queued_messages() {
 
         
         if(server::debug_mode) {
-            std::cout << "S [" << it->second.get_info().ip << "]: \"" << decode(message) << "\"" << std::endl;
+            std::cout << "S [" << it->second.get_info().ip << "]: \"" << decode(to_send) << "\"" << std::endl;
         }
 
-        send(client_socket, message.c_str(), message.size(), 0);
+        send(client_socket, to_send.c_str(), to_send.size(), 0);
 
     }
 }
@@ -353,8 +353,8 @@ void server::add_to_client_map(std::string nickname, client* client){
     client_map.emplace(nickname, client);
 }
 
-void server::send_message_to_client(std::string nickname, std::string message){
-    client_map[nickname]->send_message(message);
+void server::send_message_to_client(std::string nickname, message to_send){
+    client_map[nickname]->send_message(to_send);
 }
 
 bool server::is_user_in_channel(std::string user, std::string channel) {
