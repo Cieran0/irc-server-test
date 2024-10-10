@@ -18,6 +18,7 @@
 #include <irc_numberic_replies.hpp>
 #include <util.hpp>
 #include <chrono>
+#include <unordered_set>
 
 struct client_info{
     std::string username;
