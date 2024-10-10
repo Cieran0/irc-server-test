@@ -15,6 +15,7 @@
 #include <queue>
 #include <numeric>
 #include <irc.hpp>
+#include <irc_numberic_replies.hpp>
 #include <util.hpp>
 #include <chrono>
 
@@ -58,6 +59,9 @@ struct client{
         void UNKNOWN(irc::client_command command);
 
         bool correct_number_of_parameters(irc::client_command command, size_t expected);
+        void send_error_message(irc::numeric_reply error_code, const std::string& command_name, const std::string& text);
+        void send_error_message(irc::numeric_reply error_code, const std::string& nickname, const std::string& channel_name,  const std::string& text);
+        void broadcast_to_users(const std::unordered_set<std::string>& user_list, const message& msg, const std::string& exclude);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);
