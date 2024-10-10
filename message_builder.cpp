@@ -31,9 +31,9 @@ message_builder& message_builder::code(int code) {
 
 }
 
-message_builder& message_builder::raw(std::string str, bool addSpace) {
+message_builder& message_builder::raw(std::string str, bool add_space) {
     back << str;
-    if(addSpace){
+    if(add_space){
         back << " ";
     }
     return *this;
@@ -45,6 +45,9 @@ message_builder& message_builder::text(std::string text) {
     return *this;
 }
 
+/*
+    Returns a built message, ending with "\r\n".
+*/
 message message_builder::build() {
     back << "\r\n";
     return back.str();

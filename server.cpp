@@ -6,7 +6,6 @@
     #define close closesocket
 #endif
 
-//extern definitions
 bool server::debug_mode;
 int server::server_socket_fd = 0;
 sockaddr_in6 server::address = {};
@@ -17,6 +16,7 @@ std::string server::host_name;
 std::map<std::string,channel> server::channels;
 std::queue<std::pair<int,std::string>> server::output_queue;
 
+//Array of socket, server + clients
 pollfd server::socket_fds[MAX_CLIENTS];
 int server::number_of_socket_fds = 1; // Start with only the server socket
 
@@ -88,6 +88,7 @@ int server::init(){
         return EXIT_FAILURE;
     }
 
+    //Gets server hostname
     char hostname_buffer[256];
     if (gethostname(hostname_buffer, sizeof(hostname_buffer)) == 0) {
         host_name = std::string(hostname_buffer);
@@ -156,10 +157,13 @@ void server::handle_client_sockets()
 {
     for (int i = 1; i < number_of_socket_fds; ++i)
     {
+        //Client has sent data
         if (socket_fds[i].revents & POLLIN)
             listen_to_client(i);
+        //Error on the socket
         else if (socket_fds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
             handle_socket_error(i);
+        //Nothing from client
         else
             check_client_timeout(i);
     }
@@ -180,7 +184,9 @@ void server::check_client_timeout(int i)
         return;   
     }
 
+    //Get current time
     std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+
     std::chrono::duration<double> last_active_in_seconds = now - it->second.last_active;
 
     // More than 1 minute not active
@@ -215,30 +221,29 @@ void server::listen_to_client(int i)
     std::map<int, client>::iterator it = clients.find(socket_fds[i].fd);
     bool should_close = false;
 
-    if (it == clients.end())
-    {
+    //Client not found
+    if (it == clients.end()) {
         return;
     }
 
     client &current_client = it->second;
     should_close = current_client.read_from(buffer, sizeof(buffer));
 
-    if (should_close)
-    {
+    if (should_close) {
         kill_client_connection(client_socket, it, i);
         return;
-        
     }
 
+    //Recieve messages
     std::string messages_recieved(buffer);
+    //Split messages incase multiple sent at once
     std::vector<std::string> messages = split_string(messages_recieved, "\r\n", false);
-    for (const std::string &raw_message : messages)
-    {
-        current_client.handle_message(raw_message);
+
+    for (const std::string &msg : messages){
+        current_client.handle_message(msg);
     }
 
-    if (!current_client.is_active)
-    {
+    if (!current_client.is_active) {
         kill_client_connection(client_socket, it, i);
     }
 }
@@ -253,18 +258,18 @@ void server::kill_client_connection(int client_socket, const std::map<int, clien
     // Close connection, and remove client from polling.
     std::string nickname = client_it->second.info.nickname;
     close(client_socket);
-    for (auto &ch : channels)
-    {
+    for (std::pair<const std::string, channel> &ch : channels) {
         ch.second.remove_user(nickname);
     }
     clients.erase(client_it);
     client_map.erase(nickname);
 
-    if (i != number_of_socket_fds - 1)
-    {
+    //If client isnt last in array, set current position to last client in array
+    if (i != number_of_socket_fds - 1) {
         socket_fds[i].fd = socket_fds[number_of_socket_fds - 1].fd;
         socket_fds[i].events = socket_fds[number_of_socket_fds - 1].events;
     }
+    //Remove last client in array
     number_of_socket_fds--;
     std::cout << "Closed connection with client socket: " << client_socket << std::endl;
 }
@@ -276,9 +281,10 @@ void server::listen_for_connections()
 {
     if (socket_fds[0].revents & POLLIN)
     {
-        struct sockaddr_in6 client_addr;
+        //Accept new client
+        sockaddr_in6 client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
-        int client_socket = accept(server_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+        int client_socket = accept(server_socket_fd, (sockaddr*)&client_addr, &client_addr_len);
 
         if (client_socket < 0)
         {
@@ -292,8 +298,10 @@ void server::listen_for_connections()
             socket_fds[number_of_socket_fds].events = POLLIN; 
             number_of_socket_fds++;
 
+            //Get client ip
             char ip_buffer[INET6_ADDRSTRLEN] = {0};
             inet_ntop(AF_INET6, &client_addr.sin6_addr, ip_buffer, sizeof(ip_buffer));
+
             std::cout << "New connection from IP: [" << ip_buffer << "]" << std::endl;
             clients.try_emplace(client_socket, client_socket, std::string(ip_buffer));
         }
@@ -319,6 +327,7 @@ void server::send_all_queued_messages() {
 
         std::map<int,client>::iterator it = clients.find(client_socket);
 
+        //Client not found
         if (it == clients.end()){
             //Ignore messages to users who have left.
             continue;
@@ -326,7 +335,7 @@ void server::send_all_queued_messages() {
 
         
         if(server::debug_mode) {
-            std::cout << "S [" << it->second.info.ip << "]: \"" << decode(to_send) << "\"" << std::endl;
+            std::cout << "S [" << it->second.info.ip << "]: \"" << encode_escapes(to_send) << "\"" << std::endl;
         }
 
         send(client_socket, to_send.c_str(), to_send.size(), 0);

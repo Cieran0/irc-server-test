@@ -175,10 +175,11 @@ bool client::read_from(char* buffer, size_t buffer_length) {
         //Null terminate the string.
         buffer[number_of_bytes_received] = '\0';
         
+        //Prints debug information
         if(server::debug_mode) {
             std::cout 
                 << "R [" << info.ip << "]: \"" 
-                << decode(std::string(buffer)) 
+                << encode_escapes(std::string(buffer)) 
                 << "\"" << 
             std::endl;
         }
