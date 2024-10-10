@@ -16,7 +16,8 @@ irc::client_command irc::parse_client_command(std::string str) {
     size_t command_end = str.find_first_of(' ');
     if(command_end == std::string::npos) {
         std::cerr << "Failed to parse command [" << str << "]" << std::endl;
-        //If name never ends it returns an empty command
+        //Returns command with no args
+        parsed_command.name = str;
         return parsed_command;
     }
 
