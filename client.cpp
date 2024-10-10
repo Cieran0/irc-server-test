@@ -186,10 +186,6 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 }
 
 
-client_info client::get_info() {
-    return info;
-}
-
 /*
     Generate response to WHO #channel
 */

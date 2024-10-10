@@ -3,8 +3,6 @@
 #include <sstream>
 #include <client.hpp>
 
-typedef std::string message;
-
 class message_builder
 {
 private:

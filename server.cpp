@@ -251,7 +251,7 @@ void server::listen_to_client(int i)
 void server::kill_client_connection(int client_socket, const std::map<int, client>::iterator &client_it, int i)
 {
     // Close connection, and remove client from polling.
-    std::string nickname = client_it->second.get_info().nickname;
+    std::string nickname = client_it->second.info.nickname;
     close(client_socket);
     for (auto &ch : channels)
     {
@@ -326,7 +326,7 @@ void server::send_all_queued_messages() {
 
         
         if(server::debug_mode) {
-            std::cout << "S [" << it->second.get_info().ip << "]: \"" << decode(to_send) << "\"" << std::endl;
+            std::cout << "S [" << it->second.info.ip << "]: \"" << decode(to_send) << "\"" << std::endl;
         }
 
         send(client_socket, to_send.c_str(), to_send.size(), 0);
@@ -335,7 +335,7 @@ void server::send_all_queued_messages() {
 }
 
 client_info server::get_client_info(const std::string& client){
-    return client_map[client]->get_info();
+    return client_map[client]->info;
 }
 
 /*
