@@ -150,7 +150,10 @@ bool client::read_from(char* buffer, size_t buffer_length) {
 
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        //std::cout << "R[" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
+        
+        if(server::debug_mode) {
+            std::cout << "R [" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
+        }
 
     } else if (bytes_received == 0) {
         // Client disconnected
@@ -170,19 +173,20 @@ client_info client::get_info() {
 }
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel) {
-    //TODO: clean this up
-    std::ostringstream response;
-    
-    for (const client_info& client : clients) {
-        response << ":" << server::host_name << " 352 " << requesting_nick << " " 
-                 << channel << " " << client.username << " " 
-                 << client.ip << " " << server::host_name << " " 
-                 << client.nickname << " H"  //'H' for "Here"
-                 << " :0 " << client.realname << "\r\n";
-    }
-    
-    response << ":" << server::host_name << " 315 " << requesting_nick << " " 
-             << channel << " :End of WHO list\r\n";
+    message_builder response_builder;
 
-    return response.str();
+    for (const client_info& client : clients) {
+        response_builder.hostname(true).code(irc::RPL_WHOREPLY).raw(requesting_nick,true) 
+                .raw(channel,true).raw(client.username,true)
+                .raw(client.ip,true).hostname(false) 
+                .raw(client.nickname,true).raw("H",true)  //'H' for "Here"
+                .raw(":0",true).raw(client.realname,false).raw("\r\n",false);
+    }
+
+    response_builder.hostname(true).code(irc::RPL_ENDOFWHO).raw(requesting_nick,true)
+                    .raw(channel,true).text("End of WHO list",true);
+
+
+
+    return response_builder.build();
 }

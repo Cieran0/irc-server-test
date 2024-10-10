@@ -27,21 +27,31 @@
 
 
 namespace server{
-    extern int file_descriptor;
-    extern struct sockaddr_in6 address;
-    extern struct sockaddr_in6 client_addr;
+    const int MAX_CLIENTS = 1024;
+
+    extern int server_socket_fd;
+    extern sockaddr_in6 address;
+    extern sockaddr_in6 client_addr;
     extern std::map<int, client> clients;
     extern std::vector<std::thread> threads;
     extern std::string host_name;
     extern std::map<std::string,channel> m_channels;
     extern std::queue<std::pair<int,std::string>> output_queue;
-
+    extern pollfd socket_fds[MAX_CLIENTS]; // the socket array
+    extern int number_of_socket_fds;
+    extern bool debug_mode;
 
     int init();
-    void handle_clients();
-    client_info get_client_info(const std::string& client);
-    channel& get_channel(std::string channel_name);
-    int main();
+    void poll_loop();
+    void handle_client_sockets();
+    void check_client_timeout(int i);
+    void handle_socket_error(int i);
+    void listen_to_client(int i);
+    void kill_client_connection(int client_socket, const std::map<int, client>::iterator &it, int i);
+    void listen_for_connections();
+    client_info get_client_info(const std::string &client);
+    channel &get_channel(std::string channel_name);
+    int main(bool debug);
     void add_to_client_map(std::string nickname, client* client);
     void send_message_to_client(std::string nickname, std::string message);
     extern std::map<std::string,client*> client_map;
