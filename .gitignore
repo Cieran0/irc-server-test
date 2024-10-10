@@ -27,9 +27,9 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 test_irc
 .vscode/*
 linux_server
+win_server.exe

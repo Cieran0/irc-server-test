@@ -131,7 +131,7 @@ void server::poll_loop(){
         int poll_count;
         
         #ifdef _WIN32
-            poll_count = WSAPoll(fds, nfds, 5000); // Windows poll
+            poll_count = WSAPoll(socket_fds, number_of_socket_fds, 5000); // Windows poll
         #else
             poll_count = poll(socket_fds, number_of_socket_fds, 5000);  // Linux poll
         #endif
