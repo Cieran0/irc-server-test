@@ -35,7 +35,7 @@ namespace server{
     extern std::map<int, client> clients;
     extern std::vector<std::thread> threads;
     extern std::string host_name;
-    extern std::map<std::string,channel> m_channels;
+    extern std::map<std::string,channel> channels;
     extern std::queue<std::pair<int,std::string>> output_queue;
     extern pollfd socket_fds[MAX_CLIENTS]; // the socket array
     extern int number_of_socket_fds;

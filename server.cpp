@@ -14,12 +14,15 @@ std::map<std::string, client*> server::client_map;
 std::map<int, client> server::clients;
 std::vector<std::thread> server::threads;
 std::string server::host_name;
-std::map<std::string,channel> server::m_channels;
+std::map<std::string,channel> server::channels;
 std::queue<std::pair<int,std::string>> server::output_queue;
 
-pollfd server::socket_fds[MAX_CLIENTS]; // the socket array
-int server::number_of_socket_fds = 1; // Initially only 1 (the server socket)
+pollfd server::socket_fds[MAX_CLIENTS];
+int server::number_of_socket_fds = 1; // Start with only the server socket
 
+/*
+    Initialises the server socket, returns 0 for success.
+*/
 int server::init(){
 
     #ifdef _WIN32
@@ -31,6 +34,8 @@ int server::init(){
         }
     #endif
 
+
+    // Create the server socket
     server_socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
     if(server_socket_fd < 0){
         std::cerr << "Error creating socket" << std::endl;
@@ -42,6 +47,7 @@ int server::init(){
         return EXIT_FAILURE;
     }
 
+    // Makes it easier to rebind to socket after restarting program
     int optval = 1;
     if(setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval)) < 0){
         std::cerr << "Error setting socket options" << std::endl;
@@ -54,6 +60,7 @@ int server::init(){
         return EXIT_FAILURE;
     }
 
+    // Set the socket port to PORT
     memset(&address,0,sizeof(address));
     address.sin6_family = AF_INET6;
     address.sin6_addr = in6addr_any;
@@ -91,20 +98,22 @@ int server::init(){
 
     std::cout << "Server started on port: " << PORT << " (IPv6)" << std::endl;
 
+    socket_fds[0].fd = server_socket_fd;
+    socket_fds[0].events = POLLIN;
+
     return 0;
 }
 
+/*
+    Server entry point, if debug, server will print debug information.
+*/
 int server::main(bool debug){
     debug_mode = debug;
     if(init() != 0) {
         return EXIT_FAILURE;
     }
 
-    socket_fds[0].fd = server_socket_fd;  // Server socket
-    socket_fds[0].events = POLLIN;
-
     poll_loop();
-
 
     #ifdef _WIN32
         WSACleanup(); //Windows clean up
@@ -113,6 +122,9 @@ int server::main(bool debug){
     return 0;
 }
 
+/*
+    Handles polling connections.
+*/
 void server::poll_loop(){
     while (true) {
         int poll_count;
@@ -136,6 +148,10 @@ void server::poll_loop(){
     }
 }
 
+
+/*
+    Handles receiving data from clients, connection errors and timeouts.
+*/
 void server::handle_client_sockets()
 {
     for (int i = 1; i < number_of_socket_fds; ++i)
@@ -149,6 +165,10 @@ void server::handle_client_sockets()
     }
 }
 
+/*
+    Checks if a client has sent a message in the last 60 seconds.
+    If not disconnects the client.
+*/
 void server::check_client_timeout(int i)
 {
     int client_socket = socket_fds[i].fd;
@@ -174,6 +194,9 @@ void server::check_client_timeout(int i)
     }
 }
 
+/*
+    Disconnects client if a error occurs.
+*/
 void server::handle_socket_error(int i)
 {
     std::cerr << "Error or hang-up on socket: " << socket_fds[i].fd << std::endl;
@@ -182,6 +205,9 @@ void server::handle_socket_error(int i)
     kill_client_connection(socket_fds[i].fd, it, i);
 }
 
+/*
+    Reads from client, disconnecting if recieves QUIT.
+*/
 void server::listen_to_client(int i)
 {
     char buffer[1024];
@@ -217,16 +243,21 @@ void server::listen_to_client(int i)
     }
 }
 
-void server::kill_client_connection(int client_socket, const std::map<int, client>::iterator &it, int i)
+
+/*
+    Kills the connection with a client.
+    Cleans up clients and client_map.
+*/
+void server::kill_client_connection(int client_socket, const std::map<int, client>::iterator &client_it, int i)
 {
     // Close connection, and remove client from polling.
-    std::string nickname = it->second.get_info().nickname;
+    std::string nickname = client_it->second.get_info().nickname;
     close(client_socket);
-    for (auto &ch : m_channels)
+    for (auto &ch : channels)
     {
         ch.second.remove_user(nickname);
     }
-    clients.erase(it);
+    clients.erase(client_it);
     client_map.erase(nickname);
 
     if (i != number_of_socket_fds - 1)
@@ -238,6 +269,9 @@ void server::kill_client_connection(int client_socket, const std::map<int, clien
     std::cout << "Closed connection with client socket: " << client_socket << std::endl;
 }
 
+/*
+    Listens on the Server socket, accepting new clients.
+*/
 void server::listen_for_connections()
 {
     if (socket_fds[0].revents & POLLIN)
@@ -271,6 +305,9 @@ void server::listen_for_connections()
     }
 }
 
+/*
+    Empties the output queue, sending messages to clients.
+*/
 void server::send_all_queued_messages() {
 
     while (!output_queue.empty())
@@ -301,11 +338,15 @@ client_info server::get_client_info(const std::string& client){
     return client_map[client]->get_info();
 }
 
+/*
+    If no channel with channel_name exists, create one.
+    Returns the channel with channel_name.
+*/
 channel& server::get_channel(std::string channel_name){
-    if(!m_channels.contains(channel_name)){
-        m_channels.emplace(channel_name, channel(channel_name));
+    if(!channels.contains(channel_name)){
+        channels.emplace(channel_name, channel(channel_name));
     }
-    return m_channels[channel_name];
+    return channels[channel_name];
 }
 
 void server::add_to_client_map(std::string nickname, client* client){
@@ -317,5 +358,5 @@ void server::send_message_to_client(std::string nickname, std::string message){
 }
 
 bool server::is_user_in_channel(std::string user, std::string channel) {
-    return get_channel(channel).is_in(user);
+    return get_channel(channel).has_user(user);
 }

@@ -12,7 +12,7 @@ class channel{
         channel() = default;
         channel(std::string name);
         bool empty();
-        bool is_in(std::string nickname);
+        bool has_user(std::string nickname);
         void join(std::string nickname);
         void remove_user(std::string nickname);
         std::unordered_set<std::string> get_users();

@@ -8,7 +8,7 @@ bool channel::empty(){
     return m_users.empty();
 }
 
-bool channel::is_in(std::string nickname){
+bool channel::has_user(std::string nickname){
     return m_users.contains(nickname);
 }
 

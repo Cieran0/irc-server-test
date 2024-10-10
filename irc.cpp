@@ -2,40 +2,42 @@
 #include <iostream>
 #include <sstream>
 
-irc::client_command irc::parseClientCommand(std::string clientCommand) {
-
-    irc::client_command parsedCommand;
-    parsedCommand.raw = clientCommand;
+/*
+    Parses a string into a irc::client_command.
+    Extracts command e.g "PRIVMSG" 
+    and arguments e.g {"#channel", "This is a message"}
+*/
+irc::client_command irc::parse_client_command(std::string clientCommand) {
+    //TODO: comment this!
+    irc::client_command parsed_command;
+    parsed_command.raw = clientCommand;
 
     size_t command_end = clientCommand.find_first_of(' ');
     if(command_end == std::string::npos) {
-        //FIXME handle error reading client command
-        std::cout << "Failed to parse command [" << clientCommand << "]" << std::endl;
+        std::cerr << "Failed to parse command [" << clientCommand << "]" << std::endl;
     }
 
-    parsedCommand.command = clientCommand.substr(0, command_end);
+    parsed_command.command = clientCommand.substr(0, command_end);
 
     size_t after_name = command_end + 1;
     std::string argsString = clientCommand.substr(after_name);
-    size_t endOfSpaceSeperated = argsString.find_first_of(':');
+    size_t end_of_space_seperated = argsString.find_first_of(':');
 
     std::string last_args;
-    if (endOfSpaceSeperated != std::string::npos) {
-        last_args = argsString.substr(endOfSpaceSeperated + 1);
-        argsString = argsString.substr(0, endOfSpaceSeperated);
+    if (end_of_space_seperated != std::string::npos) {
+        last_args = argsString.substr(end_of_space_seperated + 1);
+        argsString = argsString.substr(0, end_of_space_seperated);
     }
 
     std::istringstream iss(argsString);
     std::string arg;
     while (iss >> arg) {
-        parsedCommand.arguments.push_back(arg);
+        parsed_command.arguments.push_back(arg);
     }
-
-
 
     if(!last_args.empty()) {
-        parsedCommand.arguments.push_back(last_args);
+        parsed_command.arguments.push_back(last_args);
     }
 
-    return parsedCommand;
+    return parsed_command;
 }

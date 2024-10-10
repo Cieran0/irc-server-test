@@ -34,6 +34,7 @@ struct client{
         ~client();
 
         client_info get_info();
+        bool info_empty();
         void handle_message(std::string message);
         void send_message(std::string message);
         std::string get_next_message();

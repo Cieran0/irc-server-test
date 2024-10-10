@@ -15,7 +15,7 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
                                     .hostname(true)
                                     .code(irc::ERR_NEEDMOREPARAMS)
                                     .raw(parsedCommand.command,true)
-                                    .text("Not enough parameters",true)
+                                    .text("Not enough parameters")
                                     .build();
         send_message(too_few_parameters);
         return false;
@@ -24,7 +24,7 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
                                     .hostname(true)
                                     .code(irc::ERR_UNKNOWNCOMMAND)
                                     .raw(parsedCommand.command,true)
-                                    .text("Too many parameters!",true)
+                                    .text("Too many parameters!")
                                     .build();
         send_message(too_many_parameters);
         return false;
@@ -48,7 +48,7 @@ void client::NICK(irc::client_command parsedCommand) {
                                     .hostname(true)
                                     .code(irc::ERR_NICKNAMEINUSE)
                                     .raw(nickname, true)
-                                    .text("Nickname is already in use", true)
+                                    .text("Nickname is already in use")
                                     .build();
 
         send_message(name_in_use);
@@ -92,7 +92,7 @@ void client::JOIN(irc::client_command parsedCommand)
                                     .code(irc::ERR_CANNOTSENDTOCHAN)
                                     .raw(info.nickname, true)
                                     .raw(channel_name, true)
-                                    .text("Invalid channel name", true)
+                                    .text("Invalid channel name")
                                     .build();
         send_message(bad_channel_name);
         return;
@@ -114,7 +114,7 @@ void client::JOIN(irc::client_command parsedCommand)
                                     .code(irc::RPL_NOTOPIC)
                                     .raw(info.nickname, true)
                                     .raw(channel_name, true)
-                                    .text("No topic is set", true)
+                                    .text("No topic is set")
                                     .build();
 
     send_message(topic_message);
@@ -131,7 +131,7 @@ void client::JOIN(irc::client_command parsedCommand)
                                         .raw(info.nickname, false)
                                         .raw(" = ", false)
                                         .raw(channel_name, true)
-                                        .text(user_raw, true)
+                                        .text(user_raw)
                                         .build();
 
     send_message(user_list_message);
@@ -141,7 +141,7 @@ void client::JOIN(irc::client_command parsedCommand)
                                             .code(irc::RPL_ENDOFNAMES)
                                             .raw(info.nickname, true)
                                             .raw(channel_name, true)
-                                            .text("End of NAMES list", true)
+                                            .text("End of NAMES list")
                                             .build();
 
     send_message(user_list_end_message);
@@ -171,7 +171,7 @@ void client::PART(irc::client_command parsedCommand) {
                                         .code(irc::ERR_CANNOTSENDTOCHAN)
                                         .raw(info.nickname, true)
                                         .raw(channel_name, true)
-                                        .text("Invalid channel name", true)
+                                        .text("Invalid channel name")
                                         .build();
         send_message(bad_channel_name);
         return;
@@ -183,7 +183,7 @@ void client::PART(irc::client_command parsedCommand) {
                                         .code(irc::ERR_CANNOTSENDTOCHAN)
                                         .raw(info.nickname, true)
                                         .raw(channel_name, true)
-                                        .text("Invalid channel name", true)
+                                        .text("Invalid channel name")
                                         .build();
         send_message(bad_channel_name);
         return;
@@ -213,7 +213,7 @@ void client::PING(irc::client_command parsedCommand) {
                                     .hostname(true)
                                     .raw("PONG",true)
                                     .hostname(false)
-                                    .text(pong_code,true)
+                                    .text(pong_code)
                                     .build();
     send_message(pong_message);
 }
@@ -231,7 +231,7 @@ void client::WHO(irc::client_command parsedCommand) {
                                         .code(irc::ERR_CANNOTSENDTOCHAN)
                                         .raw(info.nickname, true)
                                         .raw(channel_name, true)
-                                        .text("Invalid channel name", true)
+                                        .text("Invalid channel name")
                                         .build();
         send_message(bad_channel_name);
         return;
@@ -270,7 +270,7 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
                                             .code(irc::ERR_CANNOTSENDTOCHAN)
                                             .raw(info.nickname, true)
                                             .raw(channel_or_user, true)
-                                            .text("Invalid channel name", true)
+                                            .text("Invalid channel name")
                                             .build();
             send_message(bad_channel_name);
             return;
@@ -285,7 +285,7 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
                                             .code(irc::ERR_NOSUCHNICK)
                                             .raw(info.nickname, true)
                                             .raw(channel_or_user, true)
-                                            .text("Nickname not in use", true)
+                                            .text("Nickname not in use")
                                             .build();
             send_message(bad_channel_name);
             return;
@@ -297,7 +297,7 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
                         .user_details(info)
                         .raw("PRIVMSG",true)
                         .raw(channel_or_user,true)
-                        .text(text,true)
+                        .text(text)
                         .build();
     for(std::string nickname : user_list) {
         //std::cout << "USER: " << nickname << std::endl;
@@ -318,7 +318,7 @@ void client::QUIT(irc::client_command parsedCommand) {
     std::string quit_message =  message_builder()
                         .user_details(info)
                         .raw("QUIT", true)
-                        .text(reason,true)
+                        .text(reason)
                         .build();
 
     for(const auto user : server::client_map) {
@@ -332,7 +332,7 @@ void client::UNKNOWN(irc::client_command parsedCommand) {
                                     .hostname(true)
                                     .code(irc::ERR_UNKNOWNCOMMAND)
                                     .raw(parsedCommand.command,true)
-                                    .text("Unknown command",true)
+                                    .text("Unknown command")
                                     .build();
     send_message(unknown_message);
 }

@@ -8,20 +8,9 @@ std::string pad_code(int code) {
     return code_string;
 }
 
-message_builder::message_builder()
-{
+message_builder::message_builder() {}
 
-}
-
-message_builder::message_builder(std::string prefix) {
-    back << prefix;
-
-}
-
-
-message_builder::~message_builder()
-{
-}
+message_builder::~message_builder() {}
 
 message_builder& message_builder::hostname(bool add_colon) {
     if(add_colon){
@@ -30,12 +19,14 @@ message_builder& message_builder::hostname(bool add_colon) {
     back << server::host_name << " ";
     
     return *this;
-};
+}
+
 message_builder& message_builder::code(int code) {
     back << pad_code(code) << " ";
     return *this;
 
-};
+}
+
 message_builder& message_builder::raw(std::string str, bool addSpace) {
     back << str;
     if(addSpace){
@@ -43,15 +34,13 @@ message_builder& message_builder::raw(std::string str, bool addSpace) {
     }
     return *this;
 
-};
-message_builder& message_builder::text(std::string text, bool add_colon) {
-    if(add_colon){
-        back << ":";
-    }
-    back << text;
+}
+
+message_builder& message_builder::text(std::string text) {
     
+    back << ":" << text;
     return *this;
-};
+}
 
 std::string message_builder::build() {
     back << "\r\n";
