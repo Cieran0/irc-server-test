@@ -4,15 +4,15 @@
 #include <message_builder.hpp>
 #include <irc_numberic_replies.hpp>
 
-bool client::correct_number_of_parameters(irc::client_command parsedCommand, size_t expected) {
+bool client::correct_number_of_parameters(irc::client_command command, size_t expected) {
 
-    size_t got = parsedCommand.arguments.size();
+    size_t got = command.arguments.size();
 
     if(got < expected) {
         message too_few_parameters = message_builder()
                                     .hostname(true)
                                     .code(irc::ERR_NEEDMOREPARAMS)
-                                    .raw(parsedCommand.command,true)
+                                    .raw(command.command,true)
                                     .text("Not enough parameters")
                                     .build();
         send_message(too_few_parameters);
@@ -21,7 +21,7 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
         message too_many_parameters = message_builder()
                                     .hostname(true)
                                     .code(irc::ERR_UNKNOWNCOMMAND)
-                                    .raw(parsedCommand.command,true)
+                                    .raw(command.command,true)
                                     .text("Too many parameters!")
                                     .build();
         send_message(too_many_parameters);
@@ -31,8 +31,8 @@ bool client::correct_number_of_parameters(irc::client_command parsedCommand, siz
     return true;
 }
 
-void client::NICK(irc::client_command parsedCommand) {
-    if(!correct_number_of_parameters(parsedCommand,1))
+void client::NICK(irc::client_command command) {
+    if(!correct_number_of_parameters(command,1))
         return;
 
     if(!info.nickname.empty()) {
@@ -40,7 +40,7 @@ void client::NICK(irc::client_command parsedCommand) {
         return;
     }
     
-    std::string nickname = parsedCommand.arguments[0]; 
+    std::string nickname = command.arguments[0]; 
     if(server::client_map.contains(nickname)) {
         message name_in_use = message_builder()
                                     .hostname(true)
@@ -57,31 +57,31 @@ void client::NICK(irc::client_command parsedCommand) {
     server::add_to_client_map(info.nickname, this);
 }
 
-void client::USER(irc::client_command parsedCommand) {
-    if(!correct_number_of_parameters(parsedCommand,4))
+void client::USER(irc::client_command command) {
+    if(!correct_number_of_parameters(command,4))
         return;
 
     if(!info.username.empty() && !info.realname.empty()) {
         return;
     }
 
-    info.username = parsedCommand.arguments[0];
-    info.realname = parsedCommand.arguments[1];
+    info.username = command.arguments[0];
+    info.realname = command.arguments[1];
 }
 
-void client::CAP(irc::client_command parsedCommand) {
-    if( parsedCommand.arguments[0] == "END") {
+void client::CAP(irc::client_command command) {
+    if( command.arguments[0] == "END") {
         return;
     }
     send_message(":"+server::host_name+" CAP * LS :\r\n");
 }
 
-void client::JOIN(irc::client_command parsedCommand)
+void client::JOIN(irc::client_command command)
 {
-    if(!correct_number_of_parameters(parsedCommand,1))
+    if(!correct_number_of_parameters(command,1))
         return;
 
-    std::string channel_name = parsedCommand.arguments[0];
+    std::string channel_name = command.arguments[0];
 
     if(channel_name[0] != '#') {
     message bad_channel_name = message_builder()
@@ -155,12 +155,12 @@ void client::JOIN(irc::client_command parsedCommand)
     }
 }
 
-void client::PART(irc::client_command parsedCommand) {
+void client::PART(irc::client_command command) {
 
-    if(!correct_number_of_parameters(parsedCommand,1))
+    if(!correct_number_of_parameters(command,1))
         return;
 
-    std::string channel_name = parsedCommand.arguments[0];
+    std::string channel_name = command.arguments[0];
 
     if(channel_name[0] != '#') {
         message bad_channel_name = message_builder()
@@ -204,8 +204,8 @@ void client::PART(irc::client_command parsedCommand) {
 
 }
 
-void client::PING(irc::client_command parsedCommand) {
-    std::string pong_code = parsedCommand.arguments[0];
+void client::PING(irc::client_command command) {
+    std::string pong_code = command.arguments[0];
     message pong_message = message_builder()
                                     .hostname(true)
                                     .raw("PONG",true)
@@ -215,12 +215,12 @@ void client::PING(irc::client_command parsedCommand) {
     send_message(pong_message);
 }
 
-void client::WHO(irc::client_command parsedCommand) {
+void client::WHO(irc::client_command command) {
 
-    if(!correct_number_of_parameters(parsedCommand,1))
+    if(!correct_number_of_parameters(command,1))
         return;
 
-    std::string channel_name = parsedCommand.arguments[0];
+    std::string channel_name = command.arguments[0];
 
     if(!server::is_user_in_channel(info.nickname, channel_name)) {
         message bad_channel_name = message_builder()
@@ -244,17 +244,17 @@ void client::WHO(irc::client_command parsedCommand) {
     send_message(response);
 }
 
-void client::MODE(irc::client_command parsedCommand) {
-    std::string channel_name = parsedCommand.arguments[0];
+void client::MODE(irc::client_command command) {
+    std::string channel_name = command.arguments[0];
     send_message(":" + server::host_name + " 324 "+info.nickname+" "+channel_name+" +\r\n");
 }
 
-void client::PRIVMSG(irc::client_command parsedCommand) {
-    if(!correct_number_of_parameters(parsedCommand,2))
+void client::PRIVMSG(irc::client_command command) {
+    if(!correct_number_of_parameters(command,2))
         return;
 
-    std::string channel_or_user = parsedCommand.arguments[0];
-    std::string text = parsedCommand.arguments[1];
+    std::string channel_or_user = command.arguments[0];
+    std::string text = command.arguments[1];
 
     std::unordered_set<std::string> user_list;
     if(channel_or_user[0] == '#') {
@@ -300,14 +300,14 @@ void client::PRIVMSG(irc::client_command parsedCommand) {
     }
 }
 
-void client::QUIT(irc::client_command parsedCommand) {
-    if(!correct_number_of_parameters(parsedCommand, 1)) {
+void client::QUIT(irc::client_command command) {
+    if(!correct_number_of_parameters(command, 1)) {
         return;
     }
 
     is_active = false;
 
-    std::string reason = parsedCommand.arguments[0];
+    std::string reason = command.arguments[0];
 
     message quit_message =  message_builder()
                         .user_details(info)
@@ -321,11 +321,11 @@ void client::QUIT(irc::client_command parsedCommand) {
     
 }
 
-void client::UNKNOWN(irc::client_command parsedCommand) {
+void client::UNKNOWN(irc::client_command command) {
     message unknown_message = message_builder()
                                     .hostname(true)
                                     .code(irc::ERR_UNKNOWNCOMMAND)
-                                    .raw(parsedCommand.command,true)
+                                    .raw(command.command,true)
                                     .text("Unknown command")
                                     .build();
     send_message(unknown_message);

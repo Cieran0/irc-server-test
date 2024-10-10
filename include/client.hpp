@@ -45,19 +45,19 @@ struct client{
     private:
         void welcome();
         
-        void NICK(irc::client_command parsedCommand);
-        void USER(irc::client_command parsedCommand);
-        void CAP(irc::client_command parsedCommand);
-        void JOIN(irc::client_command parsedCommand);
-        void PART(irc::client_command parsedCommand);
-        void PING(irc::client_command parsedCommand);
-        void WHO(irc::client_command parsedCommand);
-        void MODE(irc::client_command parsedCommand);
-        void PRIVMSG(irc::client_command parsedCommand);
-        void QUIT(irc::client_command parsedCommand);
-        void UNKNOWN(irc::client_command parsedCommand);
+        void NICK(irc::client_command command);
+        void USER(irc::client_command command);
+        void CAP(irc::client_command command);
+        void JOIN(irc::client_command command);
+        void PART(irc::client_command command);
+        void PING(irc::client_command command);
+        void WHO(irc::client_command command);
+        void MODE(irc::client_command command);
+        void PRIVMSG(irc::client_command command);
+        void QUIT(irc::client_command command);
+        void UNKNOWN(irc::client_command command);
 
-        bool correct_number_of_parameters(irc::client_command parsedCommand, size_t expected);
+        bool correct_number_of_parameters(irc::client_command command, size_t expected);
 };
 
 std::string generate_who_response(const std::string& requesting_nick, const std::vector<client_info>& clients, const std::string& channel);
