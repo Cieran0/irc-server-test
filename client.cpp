@@ -32,48 +32,49 @@ client::~client() {
 */
 void client::welcome() {
     
-    std::string welcome_message = message_builder()
-                            .hostname(true)
-                            .code(irc::RPL_WELCOME)
-                            .raw(info.nickname, true)
-                            .text("Hi, welcome to IRC")
-                            .build();
-    std::string host_message = message_builder()
-                            .hostname(true)
-                            .code(irc::RPL_YOURHOST)
-                            .raw(info.nickname, true)
-                            .raw("Your host is", true)
-                            .hostname(true)
-                            .raw(", running version " + VERSION, false)
-                            .build();
-    std::string creation_message = message_builder()
-                            .hostname(true)
-                            .code(irc::RPL_CREATED)
-                            .raw(info.nickname, true)
-                            .text("This server was created sometime")
-                            .build();
-    std::string server_info_message = message_builder()
-                            .hostname(true)
-                            .code(irc::RPL_MYINFO)
-                            .raw(info.nickname, true)
-                            .hostname(false)
-                            .raw(VERSION +" o o", false)
-                            .build();
-
-    std::string clients_message = "There are " + std::to_string(server::clients.size());
-    std::string other_users_message = message_builder()
-                            .hostname(true)
-                            .code(irc::RPL_LUSERCLIENT)
-                            .raw(info.nickname, true)
-                            .text(clients_message + " users and 0 services on 1 server")
-                            .build();
-    std::string MOTD_message = message_builder()
-                            .hostname(true)
-                            .code(irc::ERR_NOMOTD)
-                            .raw(info.nickname, true)
-                            .text("MOTD File missing")
-                            .build();
-
+    message welcome_message = message_builder()
+                                .hostname(true)
+                                .code(irc::RPL_WELCOME)
+                                .raw(info.nickname, true)
+                                .text("Hi, welcome to IRC")
+                                .build();
+    message host_message = message_builder()
+                                .hostname(true)
+                                .code(irc::RPL_YOURHOST)
+                                .raw(info.nickname, true)
+                                .raw("Your host is", true)
+                                .hostname(true)
+                                .raw(", running version " + VERSION, false)
+                                .build();
+    message creation_message = message_builder()
+                                .hostname(true)
+                                .code(irc::RPL_CREATED)
+                                .raw(info.nickname, true)
+                                .text("This server was created sometime")
+                                .build();
+   message server_info_message = message_builder()
+                                .hostname(true)
+                                .code(irc::RPL_MYINFO)
+                                .raw(info.nickname, true)
+                                .hostname(false)
+                                .raw(VERSION +" o o", false)
+                                .build();
+    message other_users_message = message_builder()
+                                .hostname(true)
+                                .code(irc::RPL_LUSERCLIENT)
+                                .raw(info.nickname, true)
+                                .text(
+                                    "There are " + 
+                                    std::to_string(server::clients.size()) + 
+                                    " users and 0 services on 1 server"
+                                )
+                                .build();
+    message MOTD_message = message_builder()
+                                .hostname(true)
+                                .code(irc::ERR_NOMOTD)
+                                .raw(info.nickname, true)
+                                .text("MOTD File missing")
+                                .build();
     
     send_message(welcome_message);
     send_message(host_message);
@@ -90,7 +91,9 @@ void client::welcome() {
     Otherwise returns true.
 */
 bool client::info_empty() {
-    return info.username.empty() || info.realname.empty() || info.nickname.empty();
+    return (info.username.empty() || 
+            info.realname.empty() || 
+            info.nickname.empty());
 }
 
 /*
@@ -99,6 +102,7 @@ bool client::info_empty() {
 void client::handle_message(std::string raw_message){
     irc::client_command command = irc::parse_client_command(raw_message);
 
+    //Gets info like nickname and username.
     if(info_empty()){
         if("NICK" == command){
             NICK(command);
@@ -116,7 +120,7 @@ void client::handle_message(std::string raw_message){
         return;
     }
 
-    //Checks which command client has sent
+    //Reponds to command sent by client.
 
     if("JOIN" == command) {
         JOIN(command);
@@ -165,20 +169,28 @@ bool client::read_from(char* buffer, size_t buffer_length) {
     last_active = std::chrono::system_clock::now();
     is_active = true;
     bool should_close = false;
-    int bytes_received = recv(socket, buffer, buffer_length - 1, 0);
+    int number_of_bytes_received = recv(socket, buffer, buffer_length - 1, 0);
 
-    if (bytes_received > 0) {
-        buffer[bytes_received] = '\0';
+    if (number_of_bytes_received > 0) {
+        //Null terminate the string.
+        buffer[number_of_bytes_received] = '\0';
         
         if(server::debug_mode) {
-            std::cout << "R [" << info.ip << "]: \"" << decode(std::string(buffer)) << "\"" << std::endl;
+            std::cout 
+                << "R [" << info.ip << "]: \"" 
+                << decode(std::string(buffer)) 
+                << "\"" << 
+            std::endl;
         }
 
-    } else if (bytes_received == 0) {
+    }
+    //Client disconnected on purpose 
+    else if (number_of_bytes_received == 0) {
         std::cout << "Client disconnected" << std::endl;
         should_close = true;
 
-    } else {
+    } 
+    else {
         std::cerr << "Socket error on client: " << socket << std::endl;
         should_close = true;
     }

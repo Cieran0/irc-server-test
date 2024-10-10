@@ -23,14 +23,13 @@ std::vector<std::string> split_string(const std::string& input, const std::strin
 std::string decode(std::string to_decode) {
     std::string decoded_string;
 
-    // Loop through each character in the input string
     for (char c : to_decode) {
         if (c == '\n') {
-            decoded_string += "\\n";  // Replace newline with literal '\n'
+            decoded_string += "\\n";
         } else if (c == '\r') {
-            decoded_string += "\\r";  // Replace carriage return with literal '\r'
+            decoded_string += "\\r";
         } else {
-            decoded_string += c;      // Otherwise, add the character as it is
+            decoded_string += c;
         }
     }
 

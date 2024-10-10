@@ -1,6 +1,10 @@
 #include <message_builder.hpp>
 #include <server.hpp>
 
+/*
+    Turns int into format XXX
+    E.g 98 => 098
+*/
 std::string pad_code(int code) {
     std::string code_string = std::to_string(code);
     const int expected_length = 3;
@@ -37,7 +41,6 @@ message_builder& message_builder::raw(std::string str, bool addSpace) {
 }
 
 message_builder& message_builder::text(std::string text) {
-    
     back << ":" << text;
     return *this;
 }
